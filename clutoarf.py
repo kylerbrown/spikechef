@@ -1,10 +1,12 @@
 #!/usr/bin/python
-
+import os.path
 import argparse
 import h5py
 import numpy as np
 import arf
 from numpy.lib import recfunctions
+from arftoclu import arf_samplerate
+
 description = '''
 clutoarf.py
 
@@ -21,13 +23,9 @@ args = parser.parse_args()
 
 kwik_file = h5py.File(args.kwik, 'r')
 arf_file = h5py.File(args.arf, 'r')
-spikes_file = arf.open_file(args.arf.strip('.arf') + '_spikes.arf', 'w') # save location
+spikes_filename = os.path.splitext(os.path.split(args.arf)[-1])[0] + '_spikes.arf'
+spikes_file = arf.open_file(spikes_filename, 'w') # save location
 
-# traverse arf entries, count samples, add kwik data to arf format
-
-entries = [x for x in arf_file.values() if type(x) == h5py.Group]
-entries = sorted(entries, key=repr)
-start_sample=0
 
 def add_shank_field(array, shanknum):
     return recfunctions.append_fields(array, 'shank', data= shanknum * np.ones(len(array)),
@@ -39,19 +37,28 @@ for shanknum, shank in enumerate(kwik_file['shanks'].values()):
     groups_of_clusters = add_shank_field(shank['groups_of_clusters'], shanknum+1)
     if 'clusters' not in spikes_file:
         spikes_file.create_dataset('clusters', data=clusters)
-        
-        
+        spikes_file.create_dataset('groups_of_clusters', data=groups_of_clusters)
+    else:
+        spikes_file['clusters'] = np.append(spikes_file['clusters'], clusters)
+        spikes_file['groups_of_clusters'] = np.append(spikes_file['groups_of_clusters'],
+                                                      groups_of_clusters)
+ 
+# traverse arf entries, count samples, add kwik data to arf format
+
+entries = [x for x in arf_file.values() if type(x) == h5py.Group]
+entries = sorted(entries, key=repr)
+start_sample=0
 
 
 for entry in entries:
     spike_entry = arf.create_entry(spikes_file, entry.name, entry.attrs['timestamp'])
-    spikes_file.create_group(entry.name)
+#    spikes_file.create_group(os.path.split(entry.name)[-1])
     dataset_len = next((len(x) for x in entry.values()
                         if type(x) == h5py.Dataset
                         and 'datatype' in x.attrs.keys()
                         and x.attrs['datatype'] < 1000), 0)
     stop_sample = start_sample + dataset_len
-    for shanknum, shank_group in enumerate(kwik_file['shanks']):
+    for shanknum, shank_group in enumerate(kwik_file['shanks'].values()):
         allspikes = shank_group['spikes']
         allwaves = shank_group['waveforms']['waveform_filtered']
         time_mask = np.logical_and(allspikes['time'] >= start_sample,
@@ -67,8 +74,9 @@ for entry in entries:
 
         start_sample = stop_sample # update starting time for next entry
         if 'spikes' not in entry:
-            arf.create_dataset(spike_entry, 'spikes', spikes, units='samples', datatype=1001)
-            spike_entry.create_dataset(waves)
+            arf.create_dataset(spike_entry, 'spikes', spikes, units='samples', datatype=1001,
+                               sampling_rate=arf_samplerate(args.arf))
+            spike_entry.create_dataset('waves', data=waves)
         else:
             entry['spikes'] = np.append(entry['spikes'], spikes)
             entry['waves'] = np.append(entry['waves'], waves)
