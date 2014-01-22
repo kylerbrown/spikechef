@@ -16,6 +16,8 @@ def detect_pulse(x):
 
 def set_pulse_attribute(arf_file, pulse_dataset_name, verbose=False, visual=False):
     '''sets the pulse location in samples as an atribute of the entry'''
+    if visual:
+        plt.figure()
     entries = sorted([e for e in arf_file.values() if isinstance(e, h5py.Group)], key=repr)
     for entry in entries:
         if pulse_dataset_name in entry:
@@ -31,8 +33,9 @@ def set_pulse_attribute(arf_file, pulse_dataset_name, verbose=False, visual=Fals
                 plt.plot(np.arange(pulse_time-50, pulse_time+50),
                          entry[pulse_dataset_name][pulse_time-50:pulse_time+50])
                 plt.vlines(pulse_time, 0, 2, colors='r')
-                plt.show()
-                #raw_input('hit enter')
+    if visual:
+        plt.show()
+
 
 def last_dataset_name(arf_file):
     '''returns the name of the last dataset in standard arf entries'''
@@ -47,6 +50,19 @@ def last_dataset_name(arf_file):
     dsets = sorted([dset for dset in candidate_entry.values() if 'datatype' in dset.attrs
                     and dset.attrs['datatype']<1000], key=repr)
     return dsets[-1].name.split('/')[-1]
+
+
+def main(arf_name, pulse_name=-1, verbose=False, visual=False):
+    arf_file = h5py.File(arf_name, 'a')
+    if pulse_name == -1:
+        pulse_dataset_name = last_dataset_name(arf_file)
+        if verbose:
+            print('choosing last dataset {} as pulse data'.format(pulse_dataset_name))
+    else:
+        pulse_dataset_name = pulse_name
+    set_pulse_attribute(arf_file, pulse_dataset_name, verbose, visual)
+    if verbose:
+        print('aligment complete for {}'.format(arf_name))
 
 
 if __name__ == '__main__':
@@ -71,14 +87,21 @@ if __name__ == '__main__':
     parser.add_argument('--visual', help='plots all found impulse locations\
     for visual verification', action='store_true')
     args = parser.parse_args()
-    arf_file = h5py.File(args.arf, 'a')
-    if args.pulse_name == -1:
-        pulse_dataset_name = last_dataset_name(arf_file)
-        if args.verbose:
-            print('choosing last dataset {} as pulse data'.format(pulse_dataset_name))
-    else:
-        pulse_dataset_name = args.pulse_name
-    set_pulse_attribute(arf_file, pulse_dataset_name, args.verbose, args.visual)
-    if args.verbose:
-        print('aligment complete for {}'.format(args.arf))
-       
+    main(args.arf, args.pulse_name, args.verbose, args.visual)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
