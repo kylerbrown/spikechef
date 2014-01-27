@@ -8,14 +8,32 @@ import h5py
 import numpy as np
 
 
-def makedat(arf_filename, probe, Nentries=-1):
+def determine_maximum_value(entries, num_channels):
+    print('detecting maximum value to maximize bit depth...')
+    grand_mag = 0
+    for entry in entries:
+        datasets = [x for x in entry.values()
+                    if type(x) == h5py.Dataset
+                    and 'datatype' in x.attrs.keys()
+                    and x.attrs['datatype'] < 1000]
+        electrodes = sorted(datasets, key=repr)[:num_channels]
+        X = np.column_stack(electrodes)
+        mag = np.max(np.abs(X))
+        if mag > grand_mag:
+            grand_mag = mag
+            print(grand_mag)
+    return grand_mag
+
+def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
     '''generates .dat files for use in the sorting software.'''
     arf_file = h5py.File(arf_filename, 'r')
+    filebase = os.path.split(os.path.splitext(arf_filename)[0])[-1]
     entries = [x for x in arf_file.values() if type(x) == h5py.Group]
     entries = sorted(entries, key=repr)
     if Nentries > 0:
         entries = entries[:Nentries]
     filename_list = []
+    data_max = determine_maximum_value(entries, probe.num_channels)
     for entry in entries:
         # assuming the first N datasets are the electrodes
         datasets = [x for x in entry.values()
@@ -23,14 +41,15 @@ def makedat(arf_filename, probe, Nentries=-1):
                     and 'datatype' in x.attrs.keys()
                     and x.attrs['datatype'] < 1000]
         electrodes = sorted(datasets, key=repr)[:probe.num_channels]
+        if verbose == True:
+            print(len(electrodes))
+            print([len(e) for e in electrodes])
 
-        print(len(electrodes))
-        print([len(e) for e in electrodes])
-
-        filename = os.path.splitext(args.arf)[0] + '__' + os.path.split(entry.name)[-1] + '.dat'
-
+        filename = filebase + '__' + os.path.split(entry.name)[-1] + '.dat'
+        filename = os.path.join(foldername, filename)
         X = np.column_stack(electrodes)
-        X = np.ravel(np.int16(X / np.max(np.abs(X)) * (2**15 - 1)))
+        X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
+        print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
         X.tofile(filename)
         filename_list.append(os.path.abspath(filename))
     print('created {} .dat files from {}'.format(len(filename_list), arf_filename))
@@ -84,10 +103,11 @@ if __name__=='__main__':
 
     #make a directory
     foldername, ext = os.path.splitext(arf_filename)
+    print("folder name is {}".format(foldername))
     if ext != '.arf':
         raise Exception('file must have .arf extension!')
     if os.path.isdir(foldername):
-        overwrite = raw_input('Directory exists, overwrite? y/n: ')
+        overwrite = raw_input('Directory {} exists, overwrite? y/n: '.format(foldername))
         if overwrite == 'y':
             shutil.rmtree(foldername)
         else:
@@ -95,16 +115,20 @@ if __name__=='__main__':
             sys.exit()
     os.mkdir(foldername)
     os.chdir(foldername)
+    print('moving to {}'.format(os.path.abspath(os.curdir)))
+#    os.path.d
     # put dat files in directory
-    dat_fnames = makedat(arf_filename, probe, args.Nentries)
+    dat_fnames = makedat(arf_filename, foldername, probe, args.Nentries)
 
     # create params file
-    param_fname = '{}.params'.format(os.path.splitext(args.arf)[0])
+    param_fname = '{}.params'.format(os.path.join(foldername, os.path.split(foldername)[-1]))
     with open(param_fname, 'w') as f:
         f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii') for x in dat_fnames]))
         f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
         f.write('NCHANNELS = {}\n'.format(probe.num_channels))
         f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
+        #f.write('OUTPUT_DIR = \'{}\'\n'.format(foldername))
+                
         if eparams_filename is not None:
             with open(eparams_filename) as epar_f:
                 f.write(epar_f.read())
@@ -114,13 +138,15 @@ if __name__=='__main__':
     #    shutil.rmtree('_1')
 
     # run spikedetect
-    subprocess.call(['detektspikes.py', param_fname])
+    subprocess.call(['python',
+                     '/home/kjbrown/spikechef/spikedetekt/scripts/detektspikes.py',
+                     param_fname])
     #subprocess.call(['python', '/home/kjbrown/spikechef/spikedetekt/scripts/detektspikes.py', param_fname])
     #os.system('python ~/spikechef/scripts/detektspikes.py {}'.format param_fname)
 
     #run klustakwik
-    os.chdir('_1')
-    print(os.path.abspath(os.curdir))
+    os.chdir(os.path.join(foldername, '_1'))
+    print('moving to {}'.format(os.path.abspath(os.curdir)))
 
     basename = os.path.split(foldername)[-1]
     subprocess.call(['MaskedKlustaKwik',
@@ -139,3 +165,4 @@ if __name__=='__main__':
 
     if args.view:
         subprocess.call(['klustaviewa', '{}.clu.1'.format(basename)])
+

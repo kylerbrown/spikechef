@@ -12,7 +12,7 @@ for i,entry in enumerate(entries[60::2]):
                     c=plt.cm.prism(entry['spikes']['cluster_auto']/130.), alpha=.3, edgecolors='none',
                     s=20)
 
-plt.xlabel('time (seconds), stimus roughly from 1-2')
+
 plt.ylabel('trial')
 plt.title('bos')
 plt.axis('tight')
@@ -34,7 +34,6 @@ plt.axis('tight')
 plt.xlim(0, 4)
 #plt.ylim(0, 150)
 plt.show()
-
 
 
 

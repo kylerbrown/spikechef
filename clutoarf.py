@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 import os.path
 import argparse
 import h5py
@@ -13,7 +14,8 @@ clutoarf.py
 packs the spike sorting results back into an arf file
 '''
 parser = argparse.ArgumentParser(description=description)
-parser.add_argument('--kwik', help='hdf5 file containing the spike sorting results',
+parser.add_argument('--kwik', help='hdf5 file containing the spike sorting results, \
+usually a .kwik',
                     required=True)
 parser.add_argument('--arf', help='original arf file containing raw data',
                     required=True)
@@ -47,9 +49,8 @@ for shanknum, shank in enumerate(kwik_file['shanks'].values()):
 
 entries = [x for x in arf_file.values() if type(x) == h5py.Group]
 entries = sorted(entries, key=repr)
-start_sample=0
 
-
+stop_sample=0
 for entry in entries:
     spike_entry = arf.create_entry(spikes_file, entry.name, entry.attrs['timestamp'])
 #    spikes_file.create_group(os.path.split(entry.name)[-1])
@@ -57,6 +58,7 @@ for entry in entries:
                         if type(x) == h5py.Dataset
                         and 'datatype' in x.attrs.keys()
                         and x.attrs['datatype'] < 1000), 0)
+    start_sample = stop_sample # update starting time for next entry
     stop_sample = start_sample + dataset_len
     for shanknum, shank_group in enumerate(kwik_file['shanks'].values()):
         allspikes = shank_group['spikes']
@@ -68,11 +70,9 @@ for entry in entries:
         # change 'time' field to 'start' for arf compatibility
         spikes.dtype.names = tuple([x if x != 'time' else 'start' for x in spikes.dtype.names])
         spikes['start'] = spikes['start'] - start_sample
-        spikes = add_shank_field(spikes, shanknum+1)
-        #waves = recfunctions.append_fields(spikes, 'shank', data=shanknum * np.ones(len(spikes)),
-        #                                    dtypes=(np.uint16, np.uin16, np.uint16), usemask=False)
+        spikes = add_shank_field(spikes, shanknum + 1)
+        waves = add_shank_field(waves, shanknum + 1)
 
-        start_sample = stop_sample # update starting time for next entry
         if 'spikes' not in entry:
             arf.create_dataset(spike_entry, 'spikes', spikes, units='samples', datatype=1001,
                                sampling_rate=arf_samplerate(args.arf))
@@ -80,6 +80,8 @@ for entry in entries:
         else:
             entry['spikes'] = np.append(entry['spikes'], spikes)
             entry['waves'] = np.append(entry['waves'], waves)
+
+
 
 print('Done!')
 
