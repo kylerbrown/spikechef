@@ -36,7 +36,7 @@ def set_pulse_attribute(arf_file, pulse_dataset_name, verbose=False, visual=Fals
         plt.show()
 
 
-def last_dataset_name(arf_file):
+def autopulse_dataset_name(arf_file, verbose=True):
     '''returns the name of the last dataset in standard arf entries'''
     try:
         candidate_entry = next( (entry for entry in arf_file.itervalues()
@@ -48,15 +48,22 @@ def last_dataset_name(arf_file):
         sys.exit('arf file does not have sampled data')
     dsets = sorted([dset for dset in candidate_entry.values() if 'datatype' in dset.attrs
                     and dset.attrs['datatype']<1000], key=repr)
-    return dsets[-1].name.split('/')[-1]
-
+    candidate_sets= dsets[:]
+    candidate_abs_mean= [np.mean(np.abs(x)) for x in candidate_sets]
+    choice = np.argmin(candidate_abs_mean)
+    if verbose:
+        for abs_mean, cand in zip(candidate_abs_mean, candidate_sets):
+            print("{} has abs mean of {}".format(cand, abs_mean))
+        print("{} chosen for minimum value {}".format(candidate_sets[choice].name,
+                                                      candidate_abs_mean[choice]))
+    return candidate_sets[choice].name.split('/')[-1]
 
 def main(arf_name, pulse_name=-1, verbose=False, visual=False):
     arf_file = h5py.File(arf_name, 'a')
     if pulse_name == -1:
-        pulse_dataset_name = last_dataset_name(arf_file)
+        pulse_dataset_name = autopulse_dataset_name(arf_file)
         if verbose:
-            print('choosing last dataset {} as pulse data'.format(pulse_dataset_name))
+            print('choosing auto pulse dataset {} as pulse data'.format(pulse_dataset_name))
     else:
         pulse_dataset_name = pulse_name
     set_pulse_attribute(arf_file, pulse_dataset_name, verbose, visual)

@@ -24,6 +24,7 @@ def determine_maximum_value(entries, num_channels):
             print(grand_mag)
     return grand_mag
 
+
 def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
     '''generates .dat files for use in the sorting software.'''
     arf_file = h5py.File(arf_filename, 'r')
@@ -41,7 +42,7 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
                     and 'datatype' in x.attrs.keys()
                     and x.attrs['datatype'] < 1000]
         electrodes = sorted(datasets, key=repr)[:probe.num_channels]
-        if verbose == True:
+        if verbose:
             print(len(electrodes))
             print([len(e) for e in electrodes])
 
@@ -55,11 +56,13 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
     print('created {} .dat files from {}'.format(len(filename_list), arf_filename))
     return filename_list
 
+
 def arf_samplerate(arf_filename):
     arf_file = h5py.File(arf_filename, 'r')
     for group in arf_file.values():
         for dataset in group.values():
-            if 'datatype' in dataset.attrs and dataset.attrs['datatype'] < 1000 \
+            if 'datatype' in dataset.attrs \
+               and dataset.attrs['datatype'] < 1000 \
                and 'sampling_rate' in dataset.attrs:
                 return dataset.attrs['sampling_rate']
 
@@ -158,10 +161,6 @@ if __name__=='__main__':
 
     # finally copy the probe file and start klustaviewa
     shutil.copy(probe_filename, '.')
-
-
-
-
 
     if args.view:
         subprocess.call(['klustaviewa', '{}.clu.1'.format(basename)])

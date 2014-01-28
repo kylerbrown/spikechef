@@ -56,11 +56,13 @@ def main():
             arf_file = h5py.File(arf_name)
         
             #obtain list of groups (which excludes datasets) in arf file root
-            group_list = [entry for entry in arf_file.itervalues() if isinstance(h5py.Group) ]
+            group_list = sorted([entry for entry in arf_file.itervalues()
+                          if isinstance(entry, h5py.Group) ], key=repr)
             if len(group_list) != len(stim_list):
-                print "The number of stimulus presentations listed in the log \"%s\" is not the same as the \n"\
-                    "number of groups in the corresponding file \"%s\"" \
-                    ".This file will not be labeled." %(log_name, arf_name)
+                print "The number of stimulus presentations listed in the log \"%s\":%s is not the same as the \n"\
+                    "number of groups in the corresponding file \"%s\"%s" \
+                    ".This file will not be labeled." %(log_name, len(stim_list), arf_name, 
+                                                        len(group_list))
                 continue       
 
             for group, stimulus in zip(group_list, stim_list):
