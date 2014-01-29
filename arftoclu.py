@@ -7,6 +7,8 @@ from spikedetekt.probes import Probe
 import h5py
 import numpy as np
 
+CHUNKSIZE = 200000
+
 
 def determine_maximum_value(entries, num_channels):
     print('detecting maximum value to maximize bit depth...')
@@ -17,11 +19,12 @@ def determine_maximum_value(entries, num_channels):
                     and 'datatype' in x.attrs.keys()
                     and x.attrs['datatype'] < 1000]
         electrodes = sorted(datasets, key=repr)[:num_channels]
-        X = np.column_stack(electrodes)
-        mag = np.max(np.abs(X))
-        if mag > grand_mag:
-            grand_mag = mag
-            print(grand_mag)
+        for i in range(0, len(electrodes[0]), CHUNKSIZE):
+            X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
+            mag = np.max(np.abs(X))
+            if mag > grand_mag:
+                grand_mag = mag
+                print(grand_mag)
     return grand_mag
 
 
@@ -46,14 +49,19 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
             print(len(electrodes))
             print([len(e) for e in electrodes])
 
-        filename = filebase + '__' + os.path.split(entry.name)[-1] + '.dat'
-        filename = os.path.join(foldername, filename)
-        X = np.column_stack(electrodes)
-        X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
-        print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
-        X.tofile(filename)
-        filename_list.append(os.path.abspath(filename))
-    print('created {} .dat files from {}'.format(len(filename_list), arf_filename))
+        for i in range(0, len(electrodes[0]), CHUNKSIZE):
+            X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
+            X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
+            filename = '{}__{}_{:03}.dat'.format(filebase,
+                                                 os.path
+                                                 .split(entry.name)[-1],
+                                                 i / CHUNKSIZE)
+            filename = os.path.join(foldername, filename)
+            print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
+            X.tofile(filename)
+            filename_list.append(os.path.abspath(filename))
+    print('created {} .dat files from {}'.format(len(filename_list),
+                                                 arf_filename))
     return filename_list
 
 
@@ -67,42 +75,49 @@ def arf_samplerate(arf_filename):
                 return dataset.attrs['sampling_rate']
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     startTime = datetime.now()
 
-    description=''' 
+    description = '''
     arftodat.py
 
-    converts arf files into .dat files for use in the spikedetekt sorting algorithm.
+    converts arf files into .dat files for use in the spikedetekt
+    sorting algorithm.
     Hopefully a temporary fix, spikedetekt should read arf files one day.
 
     THEN it runs spikedetekt and klustakwik
     '''
 
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-f', '--arf', help='Arf file for sorting', required=True)
-    parser.add_argument('-p', '--probe', help='Probe file specifying the geometry of the probe',
+    parser.add_argument('-f', '--arf', help='Arf file for sorting',
                         required=True)
-    parser.add_argument('--detektparams', help='extra spikedetect parameters file',
+    parser.add_argument('-p', '--probe',
+                        help='Probe file specifying the geometry of the probe',
+                        required=True)
+    parser.add_argument('--detektparams',
+                        help='extra spikedetect parameters file',
                         default=None)
-    parser.add_argument('--view', help='Opens data in klustaviewa after sorting',
+    parser.add_argument('--view',
+                        help='Opens data in klustaviewa after sorting',
                         action='store_true')
-    parser.add_argument('-N','--Nentries', help='process only the first Nentries',
+    parser.add_argument('-N', '--Nentries',
+                        help='process only the first Nentries',
                         type=int, default=-1)
     args = parser.parse_args()
     '''
     from collections import namedtuple
     tempargs = namedtuple('Args', 'arf probe eparams viewa')
-    args = tempargs('bk196-2014_01_03-hvc-25s-0-0.arf', 'A1x32-Poly3-25s.probe',
+    args = tempargs('bk196-2014_01_03-hvc-25s-0-0.arf',
+    'A1x32-Poly3-25s.probe',
                     'extra_spikedetekt_params', True)
     '''
     # read in probe file to determine the number of probes
     arf_filename = os.path.abspath(args.arf)
     probe_filename = os.path.abspath(args.probe)
-    eparams_filename = os.path.abspath(args.detektparams) if args.detektparams is not None else None
+    eparams_filename = os.path.abspath(args.
+                                       detektparams) if args.detektparams is not None else None
     probe = Probe(args.probe)
     print(probe_filename)
-
 
     #make a directory
     foldername, ext = os.path.splitext(arf_filename)
@@ -110,7 +125,8 @@ if __name__=='__main__':
     if ext != '.arf':
         raise Exception('file must have .arf extension!')
     if os.path.isdir(foldername):
-        overwrite = raw_input('Directory {} exists, overwrite? y/n: '.format(foldername))
+        overwrite = raw_input('Directory {} exists, overwrite? y/n: '
+                              .format(foldername))
         if overwrite == 'y':
             shutil.rmtree(foldername)
         else:
@@ -124,7 +140,9 @@ if __name__=='__main__':
     dat_fnames = makedat(arf_filename, foldername, probe, args.Nentries)
 
     # create params file
-    param_fname = '{}.params'.format(os.path.join(foldername, os.path.split(foldername)[-1]))
+    param_fname = '{}.params'.format(os.path.join(foldername,
+                                                  os.path.
+                                                  split(foldername)[-1]))
     with open(param_fname, 'w') as f:
         f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii') for x in dat_fnames]))
         f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
@@ -157,7 +175,8 @@ if __name__=='__main__':
                      '-PenaltyK', '1',
                      '-PenaltyKLogN', '0'])
 
-    print('Automatic sorting complete! total time: {}'.format(datetime.now()-startTime))
+    print('Automatic sorting complete! total time: {}'
+          .format(datetime.now()-startTime))
 
     # finally copy the probe file and start klustaviewa
     shutil.copy(probe_filename, '.')
