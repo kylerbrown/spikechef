@@ -141,6 +141,7 @@ if __name__ == '__main__':
 #    os.path.d
     # put dat files in directory
     dat_fnames = makedat(arf_filename, foldername, probe, args.Nentries)
+    assert len(dat_fnames) == len(set(dat_fnames))  # ensure unique filenames
 
     # create params file
     param_fname = '{}.params'.format(os.path.join(foldername,
