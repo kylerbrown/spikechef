@@ -7,7 +7,7 @@ from spikedetekt.probes import Probe
 import h5py
 import numpy as np
 
-CHUNKSIZE = 200000
+CHUNKSIZE = 500000
 
 
 def determine_maximum_value(entries, num_channels):
@@ -41,7 +41,7 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
         entries_name = entries_name[:Nentries]
     filename_list = []
     data_max = determine_maximum_value(entries, probe.num_channels)
-    for entry_name, entry in zip(entries, entries_name):
+    for entry_name, entry in zip(entries_name, entries):
         # assuming the first N datasets are the electrodes
         datasets = [x for x in entry.values()
                     if type(x) == h5py.Dataset
