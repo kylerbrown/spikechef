@@ -7,7 +7,7 @@ FPC = 3 # Features per channel
 
 # Options for computing in chunks
 CHUNK_SIZE = 20000 # number of time samples used in chunk for filtering and detection
-CHUNK_OVERLAP_SECONDS = 0.01 # overlap time (in seconds) of chunks, should be wider than spike width
+CHUNK_OVERLAP_SECONDS = 0.02 # overlap time (in seconds) of chunks, should be wider than spike width
 
 PENUMBRA_SIZE = 0
 
