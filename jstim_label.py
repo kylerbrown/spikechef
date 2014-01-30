@@ -79,10 +79,17 @@ def main():
                         continue
 
                 group.attrs['stimulus'] = stimulus
+                print(stimulus)
 
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
 
 
 
