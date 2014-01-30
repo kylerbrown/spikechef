@@ -1,0 +1,23 @@
+OUTPUT_DIR = './'
+DETECT_POSITIVE = False
+F_LOW = 400.
+T_BEFORE = .0004 # time before peak in extracted spike
+T_AFTER = .0006 # time after peak in extracted spike
+FPC = 3 # Features per channel
+
+# Options for computing in chunks
+CHUNK_SIZE = 20000 # number of time samples used in chunk for filtering and detection
+CHUNK_OVERLAP_SECONDS = 0.01 # overlap time (in seconds) of chunks, should be wider than spike width
+
+PENUMBRA_SIZE = 0
+
+USE_WEIGHTED_MEAN_PEAK_SAMPLE = False
+
+RECORD_RAW = False # raw data
+RECORD_HIGH = False # high pass filtered data
+RECORD_LOW = False # low pass filtered data
+WRITE_FIL_FILE = False # write filtered output to .fil file
+WRITE_BINFIL_FILE = False # write filtered output to .fil file
+
+DTYPE = "i2" # ">i2" (> means big-endian), "i4", "f2"
+
