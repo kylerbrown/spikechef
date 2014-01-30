@@ -34,11 +34,14 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
     filebase = os.path.split(os.path.splitext(arf_filename)[0])[-1]
     entries = [x for x in arf_file.values() if type(x) == h5py.Group]
     entries = sorted(entries, key=repr)
+    entries_name = [k for k, x in arf_file.items() if type(x) == h5py.Group]
+    entries_name = sorted(entries_name, key=repr)
     if Nentries > 0:
         entries = entries[:Nentries]
+        entries_name = entries_name[:Nentries]
     filename_list = []
     data_max = determine_maximum_value(entries, probe.num_channels)
-    for entry in entries:
+    for entry_name, entry in zip(entries, entries_name):
         # assuming the first N datasets are the electrodes
         datasets = [x for x in entry.values()
                     if type(x) == h5py.Dataset
@@ -54,7 +57,7 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
             X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
             filename = '{}__{}_{:03}.dat'.format(filebase,
                                                  os.path
-                                                 .split(entry.name)[-1],
+                                                 .split(entry_name)[-1],
                                                  i / CHUNKSIZE)
             filename = os.path.join(foldername, filename)
             print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
@@ -149,7 +152,6 @@ if __name__ == '__main__':
         f.write('NCHANNELS = {}\n'.format(probe.num_channels))
         f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
         #f.write('OUTPUT_DIR = \'{}\'\n'.format(foldername))
-                
         if eparams_filename is not None:
             with open(eparams_filename) as epar_f:
                 f.write(epar_f.read())
@@ -164,6 +166,10 @@ if __name__ == '__main__':
                      param_fname])
     #subprocess.call(['python', '/home/kjbrown/spikechef/spikedetekt/scripts/detektspikes.py', param_fname])
     #os.system('python ~/spikechef/scripts/detektspikes.py {}'.format param_fname)
+
+    # clean up .dat files
+    print("removing .dat files...")
+    [os.remove(x) for x in dat_fnames]
 
     #run klustakwik
     os.chdir(os.path.join(foldername, '_1'))
@@ -183,4 +189,3 @@ if __name__ == '__main__':
 
     if args.view:
         subprocess.call(['klustaviewa', '{}.clu.1'.format(basename)])
-
