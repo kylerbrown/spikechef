@@ -68,7 +68,7 @@ for k, entry in zip(keys, entries):
     if 'pulse' in entry.attrs:
         spike_entry.attrs['pulse'] = entry.attrs['pulse']
     if 'stimulus' in entry.attrs:
-        spike_entry.attrs['stimulus'] = entry.attrs['stimulus'] 
+        spike_entry.attrs['stimulus'] = entry.attrs['stimulus']
 #    spikes_file.create_group(os.path.split(entry.name)[-1])
     dataset_len = next((len(x) for x in entry.values()
                         if type(x) == h5py.Dataset

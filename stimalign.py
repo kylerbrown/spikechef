@@ -16,7 +16,7 @@ def detect_pulse(x):
 
 
 def set_pulse_attribute(arf_file, pulse_dataset_name,
-                        verbose=False, visual=False):
+                        verbose=False, visual=False, stimchan=None):
     '''sets the pulse location in samples as an atribute of the entry'''
     if visual:
         plt.figure()
@@ -25,9 +25,15 @@ def set_pulse_attribute(arf_file, pulse_dataset_name,
     for entry in entries:
         if pulse_dataset_name in entry:
             pulse_time = detect_pulse(entry[pulse_dataset_name])
+            pulse_sampling_rate = entry[pulse_dataset_name]\
+                .attrs['sampling_rate']
             entry.attrs['pulse'] = pulse_time
+            entry.attrs['pulse_sampling_rate'] = pulse_sampling_rate
+            if stimchan:
+                entry.attrs['stimchan'] = stimchan
             # second location to be safe.
             entry[pulse_dataset_name].attrs['pulse'] = pulse_time
+            entry[pulse_dataset_name].attrs['pulse_sampling_rate'] = pulse_time
             if verbose:
                 print('''Pulse time {} added to entry {},
                 using pulse channel {}.'''.format(pulse_time,
@@ -67,7 +73,7 @@ def autopulse_dataset_name(arf_file, verbose=True):
     return candidate_sets[choice].name.split('/')[-1]
 
 
-def main(arf_name, pulse_name=-1, verbose=False, visual=False):
+def main(arf_name, pulse_name=-1, verbose=False, visual=False, stimchan=None):
     arf_file = h5py.File(arf_name, 'a')
     if pulse_name == -1:
         pulse_dataset_name = autopulse_dataset_name(arf_file)
@@ -76,6 +82,8 @@ def main(arf_name, pulse_name=-1, verbose=False, visual=False):
     else:
         pulse_dataset_name = pulse_name
     set_pulse_attribute(arf_file, pulse_dataset_name, verbose, visual)
+    if stimchan:
+        set_stimchan_attribute(arf_file, stimchan)
     if verbose:
         print('aligment complete for {}'.format(arf_name))
 
@@ -104,5 +112,11 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('--visual', help='plots all found impulse locations\
     for visual verification', action='store_true')
+    parser.add_argument('--stimchan', help='channel name \
+    of stimulus record, ie pcm_031')
     args = parser.parse_args()
-    main(args.arf, args.pulse_name, args.verbose, args.visual)
+    main(args.arf, args.pulse_name, args.verbose, args.visual, args.stimchan)
+
+
+
+

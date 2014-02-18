@@ -2,7 +2,8 @@
 
 import argparse
 from datetime import datetime
-import os, os.path, subprocess, shutil, sys
+import os, os.path, shutil, sys
+from subprocess import call
 from spikedetekt.probes import Probe
 import h5py
 import numpy as np
@@ -106,6 +107,10 @@ if __name__ == '__main__':
     parser.add_argument('-N', '--Nentries',
                         help='process only the first Nentries',
                         type=int, default=-1)
+    parser.add_argument('--cluster', help="runs klustakwik",
+                        action='store_true')
+    parser.add_argument('--batch', help="runs klustakwik remotely on beast",
+                        action='store_true')
     args = parser.parse_args()
     '''
     from collections import namedtuple
@@ -117,8 +122,7 @@ if __name__ == '__main__':
     # read in probe file to determine the number of probes
     arf_filename = os.path.abspath(args.arf)
     probe_filename = os.path.abspath(args.probe)
-    eparams_filename = os.path.abspath(args.
-                                       detektparams) if args.detektparams is not None else None
+    eparams_filename = os.path.abspath(args.detektparams) if args.detektparams is not None else None
     probe = Probe(args.probe)
     print(probe_filename)
 
@@ -148,7 +152,8 @@ if __name__ == '__main__':
                                                   os.path.
                                                   split(foldername)[-1]))
     with open(param_fname, 'w') as f:
-        f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii') for x in dat_fnames]))
+        f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii')
+                                                for x in dat_fnames]))
         f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
         f.write('NCHANNELS = {}\n'.format(probe.num_channels))
         f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
@@ -162,31 +167,57 @@ if __name__ == '__main__':
     #    shutil.rmtree('_1')
 
     # run spikedetect
-    subprocess.call(['python',
-                     '/home/kjbrown/spikechef/spikedetekt/scripts/detektspikes.py',
-                     param_fname])
-    #subprocess.call(['python', '/home/kjbrown/spikechef/spikedetekt/scripts/detektspikes.py', param_fname])
-    #os.system('python ~/spikechef/scripts/detektspikes.py {}'.format param_fname)
+    call(['python',
+          '/home/kjbrown/spikechef/spikedetekt/scripts/\
+          detektspikes.py',
+          param_fname])
 
     # clean up .dat files
     print("removing .dat files...")
     [os.remove(x) for x in dat_fnames]
 
-    #run klustakwik
     os.chdir(os.path.join(foldername, '_1'))
     print('moving to {}'.format(os.path.abspath(os.curdir)))
+    # finally copy the probe file
+    shutil.copy(probe_filename, '.')
 
+    if not (args.cluster or args.batch):
+        sys.exit()
+
+    #run klustakwik
     basename = os.path.split(foldername)[-1]
-    subprocess.call(['MaskedKlustaKwik',
-                     os.path.abspath(basename), '1',
-                     '-PenaltyK', '1',
-                     '-PenaltyKLogN', '0'])
+    if args.batch:
+        call(['rsync', ' -av ', '*'
+              'beast.uchicago.edu:/home/kjbrown/' + basename])
+        print('submitting remote job')
+        call(['ssh', 'beast.uchicago.edu',
+              '\'echo "klustakwik/MaskedKlustaKwik \
+              {} 1 -PenaltyK 1 -PenaltyKLogN 0" | \
+              qsub -l nodes=1:ppn=8 \''
+              .format(os.path.join(basename, basename))])
+        call(['rsync', ' -av ',
+              'beast.uchicago.edu:/home/kjbrown/{}/*'
+              .format(basename),
+              '.'])
+        #subprocess.call(['ssh', 'beast.uchicago.edu',
+        #                 '\'rm -r {}\''.format(basename)])
+    else:
+        call(['MaskedKlustaKwik',
+              os.path.abspath(basename), '1',
+              '-PenaltyK', '1',
+              '-PenaltyKLogN', '0'])
 
     print('Automatic sorting complete! total time: {}'
           .format(datetime.now()-startTime))
 
-    # finally copy the probe file and start klustaviewa
-    shutil.copy(probe_filename, '.')
-
     if args.view:
-        subprocess.call(['klustaviewa', '{}.clu.1'.format(basename)])
+        call(['klustaviewa', '{}.clu.1'.format(basename)])
+
+
+
+
+
+
+
+
+
