@@ -10,6 +10,7 @@ description = """ runs all chef scripts given:
 import argparse
 import subprocess
 import stimalign
+import mergespon
 
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--arf', help='Arf file for sorting',
@@ -29,24 +30,24 @@ args = parser.parse_args()
 
 if args.jstim:
     subprocess.call(['python',
-                     '/home/kjbrown/spikechef/jstim_label',
+                     '/home/kjbrown/spikechef/jstim_label.py',
                      args.arf, args.jstim])
 
 if args.pulse:
     stimalign.main(args.arf)
 
+if args.spon:
+    mergespon.main(args.spon, args.arf)
 
 
-
-
-
-
-
-
-
-
-
-
+subprocess.call(['python',
+                 '/home/kjbrown/spikechef/arftoclu.py',
+                 '--arf', args.arf,
+                 '--probe', args.probe,
+                 '--detektparams',
+                 '/home/kjbrown/spikechef/extra_spikedetekt_params',
+                 '--cluster',
+                 '--batch'])
 
 
 

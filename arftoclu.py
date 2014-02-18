@@ -2,13 +2,17 @@
 
 import argparse
 from datetime import datetime
-import os, os.path, shutil, sys
+import os
+import os.path
+import shutil
+import sys
 from subprocess import call
 from spikedetekt.probes import Probe
 import h5py
 import numpy as np
 
-CHUNKSIZE = 500000
+CHUNKSIZE = 500000  # chunks of arf arrays to place in .dat binaries
+                    # size of file: CHUNKSIZE * number of channels
 
 
 def determine_maximum_value(entries, num_channels):
@@ -212,12 +216,3 @@ if __name__ == '__main__':
 
     if args.view:
         call(['klustaviewa', '{}.clu.1'.format(basename)])
-
-
-
-
-
-
-
-
-
