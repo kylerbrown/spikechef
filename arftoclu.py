@@ -8,7 +8,7 @@ import shutil
 import sys
 from subprocess import call
 from spikedetekt.probes import Probe
-from spikedetekt.scripts import detektspikes
+from spikedetekt import detektspikes
 import h5py
 import numpy as np
 
