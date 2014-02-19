@@ -85,7 +85,7 @@ def arf_samplerate(arf_filename):
 
 
 def main(arfname, probename, detektparams, Nentries=-1,
-         clutster=True, view=False, batch=False):
+         cluster=True, view=False, batch=False):
     startTime = datetime.now()
 
         # read in probe file to determine the number of probes
@@ -157,8 +157,9 @@ def main(arfname, probename, detektparams, Nentries=-1,
 
     #run klustakwik
     basename = os.path.split(foldername)[-1]
+    print(basename)
     if batch:
-        call(['rsync', ' -av ', '*'
+        call(['rsync', ' -av ', '* '
               'beast.uchicago.edu:/home/kjbrown/' + basename])
         print('submitting remote job')
         call(['ssh', 'beast.uchicago.edu',
@@ -178,11 +179,12 @@ def main(arfname, probename, detektparams, Nentries=-1,
               '-PenaltyK', '1',
               '-PenaltyKLogN', '0'])
 
+    print('Automatic sorting complete! total time: {}'
+          .format(datetime.now()-startTime))
+
     if view:
         call(['klustaviewa', '{}.clu.1'.format(basename)])
 
-    print('Automatic sorting complete! total time: {}'
-          .format(datetime.now()-startTime))
 
 if __name__ == '__main__':
     description = '''
