@@ -8,7 +8,7 @@ import shutil
 import sys
 from subprocess import call
 from spikedetekt.probes import Probe
-#from spikedetekt.core import spike_detection_job
+from spikedetekt.scripts import detektspikes
 import h5py
 import numpy as np
 
@@ -174,9 +174,10 @@ if __name__ == '__main__':
     #    shutil.rmtree('_1')
 
     # run spikedetect
-    call(['python',
-          'detektspikes.py',
-          param_fname])
+    detektspikes.main(param_fname)
+    #call(['python',
+    #      'detektspikes.py',
+    #      param_fname])
 
     # clean up .dat files
     print("removing .dat files...")
