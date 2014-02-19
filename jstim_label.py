@@ -14,7 +14,7 @@ def parse_jstim_log(log_name):
         return stim_list
 
 
-def main():
+def main(arf_paths, log_paths):
     for arf_name, log_name in zip(arf_paths, log_paths):
 
         with h5py.File(arf_name, 'a') as arf_file:
