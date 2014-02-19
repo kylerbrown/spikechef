@@ -84,53 +84,17 @@ def arf_samplerate(arf_filename):
                 return dataset.attrs['sampling_rate']
 
 
-if __name__ == '__main__':
+def main(arfname, probename, detektparams, Nentries=-1,
+         clutster=True, view=False, batch=False):
     startTime = datetime.now()
 
-    description = '''
-    arftodat.py
+        # read in probe file to determine the number of probes
+    arf_filename = os.path.abspath(arfname)
+    probe_filename = os.path.abspath(probename)
+    eparams_filename = os.path.abspath(detektparams)\
+        if detektparams is not None else None
 
-    converts arf files into .dat files for use in the spikedetekt
-    sorting algorithm.
-    Hopefully a temporary fix, spikedetekt should read arf files one day.
-
-    THEN it runs spikedetekt and klustakwik
-    '''
-
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-f', '--arf', help='Arf file for sorting',
-                        required=True)
-    parser.add_argument('-p', '--probe',
-                        help='Probe file specifying the geometry of the probe',
-                        required=True)
-    parser.add_argument('--detektparams',
-                        help='extra spikedetect parameters file',
-                        default=None)
-    parser.add_argument('--view',
-                        help='Opens data in klustaviewa after sorting',
-                        action='store_true')
-    parser.add_argument('-N', '--Nentries',
-                        help='process only the first Nentries',
-                        type=int, default=-1)
-    parser.add_argument('--cluster', help="runs klustakwik",
-                        action='store_true')
-    parser.add_argument('--batch', help="runs klustakwik remotely on beast",
-                        action='store_true')
-    args = parser.parse_args()
-    '''
-    from collections import namedtuple
-    tempargs = namedtuple('Args', 'arf probe eparams viewa')
-    args = tempargs('bk196-2014_01_03-hvc-25s-0-0.arf',
-    'A1x32-Poly3-25s.probe',
-                    'extra_spikedetekt_params', True)
-    '''
-    # read in probe file to determine the number of probes
-    arf_filename = os.path.abspath(args.arf)
-    probe_filename = os.path.abspath(args.probe)
-    eparams_filename = os.path.abspath(args.detektparams)\
-        if args.detektparams is not None else None
-
-    probe = Probe(args.probe)
+    probe = Probe(probename)
     print(probe_filename)
 
     #make a directory
@@ -151,7 +115,7 @@ if __name__ == '__main__':
     print('moving to {}'.format(os.path.abspath(os.curdir)))
 #    os.path.d
     # put dat files in directory
-    dat_fnames = makedat(arf_filename, foldername, probe, args.Nentries)
+    dat_fnames = makedat(arf_filename, foldername, probe, Nentries)
     assert len(dat_fnames) == len(set(dat_fnames))  # ensure unique filenames
 
     # create params file
@@ -188,12 +152,12 @@ if __name__ == '__main__':
     # finally copy the probe file
     shutil.copy(probe_filename, '.')
 
-    if not (args.cluster or args.batch):
+    if not (cluster or batch):
         sys.exit()
 
     #run klustakwik
     basename = os.path.split(foldername)[-1]
-    if args.batch:
+    if batch:
         call(['rsync', ' -av ', '*'
               'beast.uchicago.edu:/home/kjbrown/' + basename])
         print('submitting remote job')
@@ -214,8 +178,43 @@ if __name__ == '__main__':
               '-PenaltyK', '1',
               '-PenaltyKLogN', '0'])
 
+    if view:
+        call(['klustaviewa', '{}.clu.1'.format(basename)])
+
     print('Automatic sorting complete! total time: {}'
           .format(datetime.now()-startTime))
 
-    if args.view:
-        call(['klustaviewa', '{}.clu.1'.format(basename)])
+if __name__ == '__main__':
+    description = '''
+    arftodat.py
+
+    converts arf files into .dat files for use in the spikedetekt
+    sorting algorithm.
+    Hopefully a temporary fix, spikedetekt should read arf files one day.
+
+    THEN it runs spikedetekt and klustakwik
+    '''
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-f', '--arf', help='Arf file for sorting',
+                        required=True)
+    parser.add_argument('-p', '--probe',
+                        help='Probe file specifying the geometry of the probe',
+                        required=True)
+    parser.add_argument('--detektparams',
+                        help='extra spikedetect parameters file',
+                        default=None)
+    parser.add_argument('--view',
+                        help='Opens data in klustaviewa after sorting',
+                        action='store_true')
+    parser.add_argument('-N', '--Nentries',
+                        help='process only the first Nentries',
+                        type=int, default=-1)
+    parser.add_argument('--cluster', help="runs klustakwik",
+                        action='store_true')
+    parser.add_argument('--batch', help="runs klustakwik remotely on beast,\
+    will not work for you without editing source code (for now)",
+                        action='store_true')
+    args = parser.parse_args()
+    main(args.arf, args.probe, args.detektparams, args.Nentries, args.cluster,
+         args.batch)
