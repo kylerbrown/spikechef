@@ -46,11 +46,4 @@ subprocess.call(['python',
                  '--probe', args.probe,
                  '--detektparams',
                  '/home/kjbrown/spikechef/extra_spikedetekt_params',
-                 '--cluster',
-                 '--batch'])
-
-
-
-
-
-
+                 '--cluster'])
