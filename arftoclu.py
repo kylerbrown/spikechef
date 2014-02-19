@@ -8,6 +8,7 @@ import shutil
 import sys
 from subprocess import call
 from spikedetekt.probes import Probe
+#from spikedetekt.core import spike_detection_job
 import h5py
 import numpy as np
 
@@ -126,7 +127,9 @@ if __name__ == '__main__':
     # read in probe file to determine the number of probes
     arf_filename = os.path.abspath(args.arf)
     probe_filename = os.path.abspath(args.probe)
-    eparams_filename = os.path.abspath(args.detektparams) if args.detektparams is not None else None
+    eparams_filename = os.path.abspath(args.detektparams)\
+        if args.detektparams is not None else None
+
     probe = Probe(args.probe)
     print(probe_filename)
 
@@ -172,8 +175,7 @@ if __name__ == '__main__':
 
     # run spikedetect
     call(['python',
-          '/home/kjbrown/spikechef/spikedetekt/scripts/\
-          detektspikes.py',
+          'detektspikes.py',
           param_fname])
 
     # clean up .dat files

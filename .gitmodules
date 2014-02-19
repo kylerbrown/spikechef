@@ -1,0 +1,3 @@
+[submodule "spikedetekt"]
+	path = spikedetekt
+	url = https://github.com/klusta-team/spikedetekt.git
