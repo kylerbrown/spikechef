@@ -3,4 +3,4 @@ ____all__ = [
     'clutoarf', 'mergespon', 'simple_raster'
 ]
 
-__version__ = '0.1.0'
+__version__ = '0.1.01'
