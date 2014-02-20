@@ -2,6 +2,7 @@ from __future__ import print_function
 from setuptools import setup
 import io
 import os
+import spikechef
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -19,9 +20,9 @@ long_description = read('README.md')
 
 setup(
     name='spikechef',
-    scripts=['spikechef/spikechef.py'],
-    version='0.1.0',
-    url='http://github.com/kylerbrown/arfview/',
+    scripts=['run_spikechef'],
+    version=spikechef.__version__,
+    url='http://github.com/kylerbrown/spikechef/',
     license='MIT License',
     author='Kyler Brown',
     author_email='kylerjbrown@gmail.com',
@@ -40,3 +41,4 @@ setup(
         'Topic :: Scientific/Engineering',
         ],
 )
+

@@ -9,8 +9,8 @@ description = """ runs all chef scripts given:
 
 import argparse
 import subprocess
-import stimalign
-import mergespon
+import spikechef.stimalign
+import spikechef.mergespon
 
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--arf', help='Arf file for sorting',
