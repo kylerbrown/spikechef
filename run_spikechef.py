@@ -32,7 +32,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.jstim:
-        jstim_label.main(args.arf, args.jstim)
+        print('running jstim_label...')
+        jstim_label.main([args.arf], [args.jstim])
 
     if args.pulse:
         stimalign.main(args.arf)
