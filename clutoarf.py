@@ -87,17 +87,22 @@ for k, entry in zip(keys, entries):
         spikes.dtype.names = tuple([x if x != 'time' else 'start'
                                     for x in spikes.dtype.names])
         spikes['start'] = spikes['start'] - start_sample
-        spikes = add_shank_field(spikes, shanknum + 1)
-        waves = add_shank_field(waves, shanknum + 1)
+        #spikes = add_shank_field(spikes, shanknum + 1)
+        #waves = add_shank_field(waves, shanknum + 1)
 
         if 'spikes' not in entry:
+            #print(spikes)
+            #print(spikes.dtype)
             arf.create_dataset(spike_entry, 'spikes', spikes,
-                               units='samples', datatype=1001,
-                               sampling_rate=arf_samplerate(args.arf))
+                               units=('id', 'id', 'a', 'mask', 'samples'), datatype=1001,
+                               sampling_rate=arf_samplerate(arf_file))
             spike_entry.create_dataset('waves', data=waves)
         else:
             entry['spikes'] = np.append(entry['spikes'], spikes)
             entry['waves'] = np.append(entry['waves'], waves)
 
-
+kwik_file.flush()
+kwik_file.close()
+arf_file.flush()
+arf_file.close()
 print('Done!')
