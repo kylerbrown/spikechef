@@ -71,17 +71,29 @@ def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
             filename_list.append(os.path.abspath(filename))
     print('created {} .dat files from {}'.format(len(filename_list),
                                                  arf_filename))
+    arf_file.flush()
+    arf_file.close()
     return filename_list
 
 
 def arf_samplerate(arf_filename):
-    arf_file = h5py.File(arf_filename, 'r')
+    if isinstance(arf_filename, h5py.File):
+        arf_file = arf_filename
+        open_flag = False
+    else:
+        arf_file = h5py.File(arf_filename, 'r')
+        open_flag = True
     for group in arf_file.values():
         for dataset in group.values():
             if 'datatype' in dataset.attrs \
                and dataset.attrs['datatype'] < 1000 \
                and 'sampling_rate' in dataset.attrs:
-                return dataset.attrs['sampling_rate']
+                sampling_rate = dataset.attrs['sampling_rate']
+                print(sampling_rate)
+                if open_flag:
+                    arf_file.flush()
+                    arf_file.close()
+                return sampling_rate
 
 
 def main(arfname, probename, detektparams, Nentries=-1,
