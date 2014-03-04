@@ -77,7 +77,6 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
         spikes.dtype.names = tuple([x if x != 'time' else 'start'
                                     for x in spikes.dtype.names])
         spikes['start'] = spikes['start'] - start_sample
-<<<<<<< HEAD
         spike_dset_name = 'spikes_{}'.format(shanknum + 1)
         waves_dset_name = 'waves_{}'.format(shanknum + 1)
 
@@ -87,18 +86,6 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
                                units='samples', datatype=1001,
                                sampling_rate=arf_samplerate(args.arf))
             spike_entry.create_dataset(waves_dset_name, data=waves)
-=======
-        #spikes = add_shank_field(spikes, shanknum + 1)
-        #waves = add_shank_field(waves, shanknum + 1)
-
-        if 'spikes' not in entry:
-            #print(spikes)
-            #print(spikes.dtype)
-            arf.create_dataset(spike_entry, 'spikes', spikes,
-                               units=('id', 'id', 'a', 'mask', 'samples'), datatype=1001,
-                               sampling_rate=arf_samplerate(arf_file))
-            spike_entry.create_dataset('waves', data=waves)
->>>>>>> 27dc73da2201b02add6a1834f2d7a36620841558
         else:
             spike_entry[waves_dset_name] = np.append(spike_entry[waves_dset_name], spikes)
             spike_entry[waves_dset_name] = np.append(spike_entry[waves_dset_name], waves)
