@@ -86,6 +86,8 @@ def main(arf_name, pulse_name=-1, verbose=False, visual=False, stimchan=None):
         set_stimchan_attribute(arf_file, stimchan)
     if verbose:
         print('aligment complete for {}'.format(arf_name))
+    arf_file.flush()
+    arf_file.close()
 
 
 if __name__ == '__main__':

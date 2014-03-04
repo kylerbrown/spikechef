@@ -5,8 +5,9 @@ description = """ runs all chef scripts given:
 + stimulus alignment (optional)
 + add spontaneous data (optional)
 """
+import sys
+import os.path
 import argparse
-import subprocess
 import stimalign
 import mergespon
 import jstim_label
@@ -30,7 +31,12 @@ if __name__ == "__main__":
     parser.add_argument('--extraparams', help='extra spikedetekt parameters',
                         default=None)
     args = parser.parse_args()
-
+    
+    basename = os.path.splitext(args.arf)[0]
+    cluster_results = os.path.join(basename, '_1', basename + '.clu')
+    if os.path.exists(cluster_results):
+        print('{} already has cluster results, skipping...')
+        sys.exit()
     if args.jstim:
         print('running jstim_label...')
         jstim_label.main([args.arf], [args.jstim])

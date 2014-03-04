@@ -116,6 +116,10 @@ if __name__ == '__main__':
     arf_f = h5py.File(args.arf, 'r') if args.arf is not '' else None
     print(arf_f)
     main(spk_f, arf_f, args.save)
+    spk_f.flush()
+    spk_f.close()
+    arf_f.flush()
+    arf_f.close()
 
 
 
