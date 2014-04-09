@@ -19,10 +19,12 @@ clutoarf.py
 packs the spike sorting results back into an arf file
 '''
 
+
 def add_shank_field(array, shanknum):
     return recfunctions.append_fields(array, 'shank',
                                       data=shanknum * np.ones(len(array)),
                                       dtypes=np.uint16, usemask=False)
+
 
 # populate spike metadata
 def spike_metadata(kwik_file, spikes_file):
@@ -50,7 +52,7 @@ def find_and_write_pulse_time(arf_file, arf_entry_name, pulsechan,
                               spike_entry, verbose=True):
             pulsetime = stimalign.detect_pulse(arf_file[arf_entry_name][pulsechan])
             pulse_sampling_rate = arf_file[arf_entry_name][pulsechan].attrs['sampling_rate']
-            arf.create_dataset(spike_entry, 'pulse', pulsetime,
+            arf.create_dataset(spike_entry, 'pulse', np.array([pulsetime]),
                                units='samples', datatype=1000,
                                sampling_rate=pulse_sampling_rate)
             if verbose:
@@ -58,10 +60,11 @@ def find_and_write_pulse_time(arf_file, arf_entry_name, pulsechan,
 
 
 def dataset_length(entry):
-    return  next((len(x) for x in entry.values()
-                  if type(x) == h5py.Dataset
-                  and 'datatype' in x.attrs.keys()
-                  and x.attrs['datatype'] < 1000), 0)
+    return next((len(x) for x in entry.values()
+                 if type(x) == h5py.Dataset
+                 and 'datatype' in x.attrs.keys()
+                 and x.attrs['datatype'] < 1000), 0)
+
 
 def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
     """adds all spikes between the start and stop samples from kwik file
@@ -80,15 +83,17 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
         spike_dset_name = 'spikes_{}'.format(shanknum + 1)
         waves_dset_name = 'waves_{}'.format(shanknum + 1)
 
-        if spike_dset_name in spike_entry:
+        if spike_dset_name not in spike_entry:
             arf.create_dataset(spike_entry, spike_dset_name,
                                spikes,
                                units='samples', datatype=1001,
                                sampling_rate=arf_samplerate(args.arf))
-            spike_entry.create_dataset(waves_dset_name, data=waves)
+            arf.create_dataset(spike_entry, waves_dset_name, waves,
+                               units='samples', datatype=11001,
+                               sampling_rate=arf_samplerate(args.arf))
         else:
-            spike_entry[waves_dset_name] = np.append(spike_entry[waves_dset_name], spikes)
-            spike_entry[waves_dset_name] = np.append(spike_entry[waves_dset_name], waves)
+            spike_entry[spike_dset_name].value = np.append(spike_entry[spike_dset_name], spikes)
+            spike_entry[waves_dset_name].value = np.append(spike_entry[waves_dset_name], waves)
 
 
 def add_lfp(spike_entry, raw_entry, Nlfp, cutoff=300, order=3,
@@ -112,10 +117,15 @@ def add_lfp(spike_entry, raw_entry, Nlfp, cutoff=300, order=3,
                            sampling_rate=lfp_sampling_rate)
 
 
-def get_geometry(probe):
-    geometry = {}
-    execfile(probe) # redefines variable geometry
-    return np.array([v for v in geometry.values()])
+def get_geometry(probe, verbose=True):
+    variables = {}
+    execfile(probe, variables)  # contains global variable geometry
+    geometry = variables['geometry']
+    geometry_array = np.array([v for v in geometry.values()])
+    if verbose:
+        print('geometry:')
+        print(geometry_array)
+    return geometry_array
 
 
 def main(kwik_file, arf_file, spikes_file,
@@ -137,7 +147,8 @@ def main(kwik_file, arf_file, spikes_file,
     if stimlog:
         stim_sequence = jstim_log_sequence(stimlog)
         if len(stim_sequence) != len(entries):
-            print("Warning! jstim log has {} entries,  arf files has {} entries"
+            print("Warning! jstim log has {} entries,  \
+            arf files has {} entries"
                   .format(len(stim_sequence), len(entries)))
     else:
         stim_sequence = [None for e in entries]
@@ -181,27 +192,34 @@ if __name__ == '__main__':
     parser.add_argument('--arf', help='original arf file containing raw data',
                         required=True)
     parser.add_argument('--stim', help='a jstim log to identify the stimulus')
-    parser.add_argument('--lfp', help='create lfp datasets, enter number of channels eg 32',
+    parser.add_argument('--lfp',
+                        help='create lfp datasets, \
+                        enter number of channels eg 32',
                         default=0, type=int)
     parser.add_argument('--pulse', help='name of pulse channel, \
     detect stimulus onset from a pulse channel',
                         type=str, default='')
     parser.add_argument('-o', '--out', help='name of output arf file')
-    parser.add_argument('--stimchannel', help='name of stimulus channel, will be copied')
-    parser.add_argument('--probe', help='name of .probe file, for storing geometry')
+    parser.add_argument('--stimchannel',
+                        help='name of stimulus channel, will be copied')
+    parser.add_argument('--probe',
+                        help='name of .probe file, for storing geometry')
     args = parser.parse_args()
 
     used_files = [args.kwik, args.arf]
-    if args.probe: used_files.append(args.probe)
+    if args.probe:
+        used_files.append(args.probe)
     for f in used_files:
         if not os.path.isfile(args.probe):
             raise IOError('no such file: {}'.format(f))
     if not args.out:
         spikes_filename = os.path.splitext(os.path
-                                           .split(args.arf)[-1])[0] + '_spikes.arf'
+                                           .split(args.arf)[-1])[0] \
+            + '_spikes.arf'
 
     with h5py.File(args.kwik, 'r') as kwik_file,\
-          h5py.File(args.arf, 'r') as arf_file,\
-          arf.open_file(spikes_filename, 'w') as spikes_file:
+        h5py.File(args.arf, 'r') as arf_file,\
+        arf.open_file(spikes_filename, 'w') as spikes_file:
+
         main(kwik_file, arf_file, spikes_file,
              args.stim, args.lfp, args.pulse, args.stimchannel, args.probe)

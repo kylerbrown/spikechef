@@ -6,12 +6,19 @@ T_AFTER = .0006 # time after peak in extracted spike
 FPC = 3 # Features per channel
 
 # Options for computing in chunks
-CHUNK_SIZE = 20000 # number of time samples used in chunk for filtering and detection
-CHUNK_OVERLAP_SECONDS = 0.02 # overlap time (in seconds) of chunks, should be wider than spike width
+CHUNK_SIZE = 50000 # number of time samples used in chunk for filtering and detection
+CHUNK_OVERLAP_SECONDS = 0.05 # overlap time (in seconds) of chunks, should be wider than spike width
 
-PENUMBRA_SIZE = 0
+THRESH_SD = 5 # threshold for detection. standard deviations of signal
+
+PENUMBRA_SIZE = 0 		# what does this mean?
+ADDITIONAL_FLOAT_PENUMBRA = 0 # adds some more penumbra
+
+FLOAT_MASK_THRESH_SD = (0, 5) # (min, max), mask 0 at min, 1 at max
 
 USE_WEIGHTED_MEAN_PEAK_SAMPLE = False
+
+UPSAMPLING_FACTOR = 5
 
 RECORD_RAW = False # raw data
 RECORD_HIGH = False # high pass filtered data

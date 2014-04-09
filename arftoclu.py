@@ -119,31 +119,39 @@ def main(arfname, probename, detektparams, Nentries=-1,
                               .format(foldername))
         if overwrite == 'y':
             shutil.rmtree(foldername)
+            os.mkdir(foldername)
         else:
-            print('aborting')
-            sys.exit()
-    os.mkdir(foldername)
+            pass
+            #print('aborting')
+            #sys.exit()
+    else:
+        os.mkdir(foldername)
+
     os.chdir(foldername)
     print('moving to {}'.format(os.path.abspath(os.curdir)))
 #    os.path.d
-    # put dat files in directory
-    dat_fnames = makedat(arf_filename, foldername, probe, Nentries)
-    assert len(dat_fnames) == len(set(dat_fnames))  # ensure unique filenames
-
-    # create params file
     param_fname = '{}.params'.format(os.path.join(foldername,
                                                   os.path.
                                                   split(foldername)[-1]))
-    with open(param_fname, 'w') as f:
-        f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii')
-                                                for x in dat_fnames]))
-        f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
-        f.write('NCHANNELS = {}\n'.format(probe.num_channels))
-        f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
-        #f.write('OUTPUT_DIR = \'{}\'\n'.format(foldername))
-        if eparams_filename is not None:
-            with open(eparams_filename) as epar_f:
-                f.write(epar_f.read())
+
+    if not os.path.exists(param_fname):
+        # put dat files in directory
+        dat_fnames = makedat(arf_filename, foldername, probe, Nentries)
+        # ensure unique filenames
+        assert len(dat_fnames) == len(set(dat_fnames))
+
+        # create params file
+
+        with open(param_fname, 'w') as f:
+            f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii')
+                                                    for x in dat_fnames]))
+            f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
+            f.write('NCHANNELS = {}\n'.format(probe.num_channels))
+            f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
+            #f.write('OUTPUT_DIR = \'{}\'\n'.format(foldername))
+            if eparams_filename is not None:
+                with open(eparams_filename) as epar_f:
+                    f.write(epar_f.read())
 
     #remove old spike detect results
     #if os.path.isdir('_1'):
@@ -156,8 +164,8 @@ def main(arfname, probename, detektparams, Nentries=-1,
     #      param_fname])
 
     # clean up .dat files
-    print("removing .dat files...")
-    [os.remove(x) for x in dat_fnames]
+    #print("removing .dat files...")
+    #[os.remove(x) for x in dat_fnames]
 
     os.chdir(os.path.join(foldername, '_1'))
     print('moving to {}'.format(os.path.abspath(os.curdir)))
@@ -188,8 +196,14 @@ def main(arfname, probename, detektparams, Nentries=-1,
     else:
         call(['MaskedKlustaKwik',
               os.path.abspath(basename), '1',
-              '-PenaltyK', '1',
-              '-PenaltyKLogN', '0'])
+              '-PenaltyK', '2.0',
+              '-PenaltyKLogN', '0.0',
+              '-MaxPossibleClusters', str(int(probe.num_channels * 3)),
+              '-MaxIter', '300',
+              '-UseDistributional', '1',
+              '-UseMaskedInitialConditions', '1',
+              '-MaskStarts', str(int(probe.num_channels * 2))
+              ])
 
     print('Automatic sorting complete! total time: {}'
           .format(datetime.now()-startTime))
