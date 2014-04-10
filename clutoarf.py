@@ -87,7 +87,7 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
             arf.create_dataset(spike_entry, spike_dset_name,
                                spikes,
                                units=('ID', 'ID', 'none', 'none', 'samples'),
-                               vdatatype=1001,
+                               datatype=1001,
                                sampling_rate=arf_samplerate(args.arf))
             arf.create_dataset(spike_entry, waves_dset_name, waves,
                                units='samples', datatype=11001,
