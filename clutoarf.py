@@ -86,7 +86,8 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
         if spike_dset_name not in spike_entry:
             arf.create_dataset(spike_entry, spike_dset_name,
                                spikes,
-                               units='samples', datatype=1001,
+                               units=('ID', 'ID', 'none', 'none', 'samples'),
+                               vdatatype=1001,
                                sampling_rate=arf_samplerate(args.arf))
             arf.create_dataset(spike_entry, waves_dset_name, waves,
                                units='samples', datatype=11001,
