@@ -11,69 +11,8 @@ from spikedetekt.probes import Probe
 from spikedetekt import detektspikes
 import h5py
 import numpy as np
+from arftodat import makedat
 
-CHUNKSIZE = 500000  # chunks of arf arrays to place in .dat binaries
-                    # size of file: CHUNKSIZE * number of channels
-
-
-def determine_maximum_value(entries, num_channels):
-    print('detecting maximum value to maximize bit depth...')
-    grand_mag = 0
-    for entry in entries:
-        datasets = [x for x in entry.values()
-                    if type(x) == h5py.Dataset
-                    and 'datatype' in x.attrs.keys()
-                    and x.attrs['datatype'] < 1000]
-        electrodes = sorted(datasets, key=repr)[:num_channels]
-        for i in range(0, len(electrodes[0]), CHUNKSIZE):
-            X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
-            mag = np.max(np.abs(X))
-            if mag > grand_mag:
-                grand_mag = mag
-                print(grand_mag)
-    return grand_mag
-
-
-def makedat(arf_filename, foldername, probe, Nentries=-1, verbose=False):
-    '''generates .dat files for use in the sorting software.'''
-    arf_file = h5py.File(arf_filename, 'r')
-    filebase = os.path.split(os.path.splitext(arf_filename)[0])[-1]
-    entries = [x for x in arf_file.values() if type(x) == h5py.Group]
-    entries = sorted(entries, key=repr)
-    entries_name = [k for k, x in arf_file.items() if type(x) == h5py.Group]
-    entries_name = sorted(entries_name, key=repr)
-    if Nentries > 0:
-        entries = entries[:Nentries]
-        entries_name = entries_name[:Nentries]
-    filename_list = []
-    data_max = determine_maximum_value(entries, probe.num_channels)
-    for entry_name, entry in zip(entries_name, entries):
-        # assuming the first N datasets are the electrodes
-        datasets = [x for x in entry.values()
-                    if type(x) == h5py.Dataset
-                    and 'datatype' in x.attrs.keys()
-                    and x.attrs['datatype'] < 1000]
-        electrodes = sorted(datasets, key=repr)[:probe.num_channels]
-        if verbose:
-            print(len(electrodes))
-            print([len(e) for e in electrodes])
-
-        for i in range(0, len(electrodes[0]), CHUNKSIZE):
-            X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
-            X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
-            filename = '{}__{}_{:03}.dat'.format(filebase,
-                                                 os.path
-                                                 .split(entry_name)[-1],
-                                                 i / CHUNKSIZE)
-            filename = os.path.join(foldername, filename)
-            print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
-            X.tofile(filename)
-            filename_list.append(os.path.abspath(filename))
-    print('created {} .dat files from {}'.format(len(filename_list),
-                                                 arf_filename))
-    arf_file.flush()
-    arf_file.close()
-    return filename_list
 
 
 def arf_samplerate(arf_filename):
@@ -96,24 +35,7 @@ def arf_samplerate(arf_filename):
                 return sampling_rate
 
 
-def main(arfname, probename, detektparams, Nentries=-1,
-         cluster=True, view=False, batch=False):
-    startTime = datetime.now()
-
-        # read in probe file to determine the number of probes
-    arf_filename = os.path.abspath(arfname)
-    probe_filename = os.path.abspath(probename)
-    eparams_filename = os.path.abspath(detektparams)\
-        if detektparams is not None else None
-
-    probe = Probe(probename)
-    print(probe_filename)
-
-    #make a directory
-    foldername, ext = os.path.splitext(arf_filename)
-    print("folder name is {}".format(foldername))
-    if ext != '.arf':
-        raise Exception('file must have .arf extension!')
+def prep_analysis_folder(foldername):
     if os.path.isdir(foldername):
         overwrite = raw_input('Directory {} exists, overwrite? y/n: '
                               .format(foldername))
@@ -129,23 +51,14 @@ def main(arfname, probename, detektparams, Nentries=-1,
 
     os.chdir(foldername)
     print('moving to {}'.format(os.path.abspath(os.curdir)))
-#    os.path.d
-    param_fname = '{}.params'.format(os.path.join(foldername,
-                                                  os.path.
-                                                  split(foldername)[-1]))
 
-    if not os.path.exists(param_fname):
-        # put dat files in directory
-        dat_fnames = makedat(arf_filename, foldername, probe, Nentries)
-        # ensure unique filenames
-        assert len(dat_fnames) == len(set(dat_fnames))
 
-        # create params file
-
-        with open(param_fname, 'w') as f:
+def create_params_file(param_fname, dat_fnames, probe, probe_filename,
+                       eparams_filename, sampling_rate=30000):
+    with open(param_fname, 'w') as f:
             f.write('RAW_DATA_FILES = {}\n'.format([x.encode('ascii')
                                                     for x in dat_fnames]))
-            f.write('SAMPLERATE = {}\n'.format(arf_samplerate(arf_filename)))
+            f.write('SAMPLERATE = {}\n'.format(sampling_rate))
             f.write('NCHANNELS = {}\n'.format(probe.num_channels))
             f.write('PROBE_FILE = \'{}\'\n'.format(probe_filename))
             #f.write('OUTPUT_DIR = \'{}\'\n'.format(foldername))
@@ -153,15 +66,52 @@ def main(arfname, probename, detektparams, Nentries=-1,
                 with open(eparams_filename) as epar_f:
                     f.write(epar_f.read())
 
-    #remove old spike detect results
-    #if os.path.isdir('_1'):
-    #    shutil.rmtree('_1')
+
+def run_klustakwik(basename, probe, shank=1, maxiter=400):
+        call(['MaskedKlustaKwik',
+              os.path.abspath(basename), str(shank),
+              '-PenaltyK', '2.0',
+              '-PenaltyKLogN', '0.0',
+              '-MaxPossibleClusters', str(int(probe.num_channels * 4)),
+              '-MaxIter', str(maxiter),
+              '-UseDistributional', '1',
+              '-UseMaskedInitialConditions', '1',
+              '-MaskStarts', str(int(probe.num_channels * 3))])
+
+
+def main(arfnames, foldername, probename, detektparams, Nentries=-1,
+         cluster=True, view=False, batch=False):
+    startTime = datetime.now()
+
+    # read in probe file to determine the number of probes
+    arf_filenames = [os.path.abspath(x) for x in arfnames]
+    sampling_rate = arf_samplerate(arf_filenames[0])
+    probe_filename = os.path.abspath(probename)
+    eparams_filename = os.path.abspath(detektparams)\
+        if detektparams is not None else None
+
+    probe = Probe(probename)
+    print(probe_filename)
+    
+    prep_analysis_folder(foldername)  # changes directory to analysis directory
+
+    param_fname = '{}.params'.format(os.path.join(foldername,
+                                                  os.path.
+                                                  split(foldername)[-1]))
+
+    # put dat files in directory
+    dat_fnames = []
+    for arf_filename in arf_filenames:
+        dat_fnames.extend(makedat(arf_filename, foldername, probe, Nentries))
+    # ensure unique filenames
+    assert len(dat_fnames) == len(set(dat_fnames))
+
+    # create params file
+    create_params_file(param_fname, dat_fnames, probe, probe_filename,
+                       eparams_filename, sampling_rate)
 
     # run spikedetect
     detektspikes.main(param_fname)
-    #call(['python',
-    #      'detektspikes.py',
-    #      param_fname])
 
     # clean up .dat files
     #print("removing .dat files...")
@@ -176,34 +126,8 @@ def main(arfname, probename, detektparams, Nentries=-1,
         sys.exit()
 
     #run klustakwik
-    basename = os.path.split(foldername)[-1]
-    print(basename)
-    if batch:
-        call(['rsync', ' -av ', '* '
-              'beast.uchicago.edu:/home/kjbrown/' + basename])
-        print('submitting remote job')
-        call(['ssh', 'beast.uchicago.edu',
-              '\'echo "klustakwik/MaskedKlustaKwik \
-              {} 1 -PenaltyK 1 -PenaltyKLogN 0" | \
-              qsub -l nodes=1:ppn=8 \''
-              .format(os.path.join(basename, basename))])
-        call(['rsync', ' -av ',
-              'beast.uchicago.edu:/home/kjbrown/{}/*'
-              .format(basename),
-              '.'])
-        #subprocess.call(['ssh', 'beast.uchicago.edu',
-        #                 '\'rm -r {}\''.format(basename)])
-    else:
-        call(['MaskedKlustaKwik',
-              os.path.abspath(basename), '1',
-              '-PenaltyK', '2.0',
-              '-PenaltyKLogN', '0.0',
-              '-MaxPossibleClusters', str(int(probe.num_channels * 3)),
-              '-MaxIter', '300',
-              '-UseDistributional', '1',
-              '-UseMaskedInitialConditions', '1',
-              '-MaskStarts', str(int(probe.num_channels * 2))
-              ])
+
+
 
     print('Automatic sorting complete! total time: {}'
           .format(datetime.now()-startTime))
