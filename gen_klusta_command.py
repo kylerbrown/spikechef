@@ -18,29 +18,31 @@ def klustakwik_strings(filebase, shank_num, nchannels, max_spikes):
                  '-PenaltyK', '2',
                  '-PenaltyKLogN', '0',
                  '-UseDistributional', '1',
-                 '-SplitFirst', '20',
+                 '-SplitFirst', '40',
                  '-SplitEvery', '100',
-                 '-MaxIter', '400'
+                 '-MaxIter', '400',
                  '-MaxPossibleClusters', str(maxclus),
                  '-UseMaskedInitialConditions', '1',
-                 '-Subset', str(subsample_factor)]
+                 '-Subset', str(subsample_factor)
+    ]
     return klus_args
 
-def main(filebase, shank_num, nchannels, max_spikes=1500000, torque=False):
+def main(filebase, shank_num, nchannels=32, max_spikes=1500000, torque=False):
     klus_args = klustakwik_strings(filebase, shank_num, nchannels, max_spikes)
     scriptname = "{}.{}.sh".format(filebase, shank_num)
+    print torque
     with open(scriptname, 'w') as f:
         if torque == 'beast':
             f.write('#PBS -N {}\n'.format(filebase))
+            f.write('#PBS -o {}_err.txt\n'.format(filebase))
             f.write('#PBS -l nodes=1:ppn=8\n')
             f.write('#PBS -l walltime=48:00:00\n')
-            f.write('#PBS -j oe')
-
+            f.write('#PBS -V\n')
+            f.write('cd {}\n'.format(filebase))
         elif torque == 'beagle':
             print("no")
 
-        klus_string = klus_args.join(' ')
-        f.write(klus_string.join(' ') + '\n')
+        f.write(" ".join(klus_args) + '\n')
 
     call(['chmod', 'u+x', scriptname])
 
@@ -53,8 +55,10 @@ if __name__ == "__main__":
     parser =  argparse.ArgumentParser(description=description)
     parser.add_argument('-f', '--filebase')
     parser.add_argument('-s', '--shank-num', help="shank number",
-                        default= '1')
+                        default= 1, type=int)
+    parser.add_argument('-n', '--n-channels', help='number of channels on shank',
+                       default=32, type=int)
     parser.add_argument('-t', '--torque', help="for running on beast or beagle, \
     say 'beast' or 'beagle'.")
     args = parser.parse_args()
-    main(args.filebase, args.shank_num, args.torque)
+    main(args.filebase, args.shank_num, args.n_channels, torque=args.torque)
