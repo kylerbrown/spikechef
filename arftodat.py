@@ -1,5 +1,6 @@
 
 import argparse
+import os
 import os.path
 import h5py
 import numpy as np
@@ -118,7 +119,7 @@ if __name__ == "__main__":
 
     # check folder
     if not os.path.isdir(args.directory):
-        mkdir(args.directory)
+        os.mkdir(args.directory)
 
     # make dats
     for arf in args.arfs:
