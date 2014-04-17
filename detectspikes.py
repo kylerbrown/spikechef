@@ -6,7 +6,7 @@ from spikedetekt import detektspikes
 import argparse
 
 def list_datfiles(directory):
-    return (os.path.abspath(f) for f in os.listdir(directory) if f[-4:] == ".dat")
+    return sorted([os.path.abspath(f) for f in os.listdir(directory) if f[-4:] == ".dat"])
 
 def arf_samplerate(arf_filename):
     if isinstance(arf_filename, h5py.File):
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-d', '--directory', help='directory with .dat file,\
     defaults to \'.\'',
-                        default='.')
+                        default='./')
     parser.add_argument('-p', '--probe',
                         help='Probe file specifying the geometry of the probe',
                         required=True)

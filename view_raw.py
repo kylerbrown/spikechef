@@ -27,7 +27,7 @@ def get_dsets(entry):
     return sorted(datasets, key=repr)
 
 
-def spike_filter(dset, cutoff=300., sampling_rate=30000.):
+def spike_filter(dset, cutoff=500., sampling_rate=30000.):
     b, a = signal.butter(3, cutoff/(sampling_rate/2.), btype="highpass")
     return signal.filtfilt(b, a, dset)
 
@@ -79,8 +79,8 @@ def dumb_plot(entry):
 
 if __name__ == '__main__':
     xstart, xstop = .5, 2.5 
-    arffile = "data/b12/b12-2014_04_11-hvc-7dd0-1-0.arf"
-    stims = jstim_log_sequence("data/b12/b12-2014_04_11-hvc-7dd0-1-0.stim")
+    arffile = "/home/kjbrown/projects/spikechef/data/b12/b12-2014_04_11-hvc-7dd0-1-0.arf"
+    stims = jstim_log_sequence("/home/kjbrown/projects/spikechef/data/b12/b12-2014_04_11-hvc-7dd0-1-0.stim")
     with h5py.File(arffile, 'r') as arf:
         entries = get_entries(arf)
         for e, stim in zip(entries, stims):
