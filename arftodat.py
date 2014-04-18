@@ -1,5 +1,6 @@
 
 import argparse
+import os
 import os.path
 import h5py
 import numpy as np
@@ -60,11 +61,11 @@ def makedat(arf_file, foldername, start_channel, stop_channel,
         for i in range(0, len(electrodes[0]), CHUNKSIZE):
             X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
             X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
-            filename = '{}__{}_{:03}.dat'.format(filebase,
+            filename = '{}_a_{}_{:03}.dat'.format(filebase,
                                                  os.path
                                                  .split(entry_name)[-1],
                                                  i / CHUNKSIZE)
-            filename = os.path.join(foldername, filename)
+            filename = os.path.abspath(os.path.join(foldername, filename))
             print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
             X.tofile(filename)
             filename_list.append(os.path.abspath(filename))
@@ -115,6 +116,12 @@ if __name__ == "__main__":
         data_max = max(maxes)
     else:
         data_max = args.max_val
+
+    # check folder
+    if not os.path.isdir(args.directory):
+        os.mkdir(args.directory)
+
+    # make dats
     for arf in args.arfs:
         with h5py.File(arf, 'r') as arf_file:
             makedat(arf_file, args.directory, args.start_channel,
