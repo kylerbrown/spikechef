@@ -4,16 +4,18 @@ import os
 import os.path
 import h5py
 import numpy as np
+from utils import arf_entries, entry_time_series_datasets
 
 CHUNKSIZE = 500000  # chunks of arf arrays to place in .dat binaries
                     # size of file: CHUNKSIZE * number of channels
 
 
-def determine_maximum_value(entries, start_channel, stop_channel, verbose=True):
+def determine_maximum_value(entries, start_channel,
+                            stop_channel, verbose=True):
     print('detecting maximum value to maximize bit depth...')
     grand_mag = 0
     for entry in entries:
-        if verbose == True:
+        if verbose is True:
             print("entering {}".format(entry))
         datasets = [x for x in entry.values()
                     if type(x) == h5py.Dataset
@@ -31,9 +33,6 @@ def determine_maximum_value(entries, start_channel, stop_channel, verbose=True):
                     print("Largest value so far: {}".format(grand_mag))
     return grand_mag
 
-def arf_entries(arf_file):
-    entries = [x for x in arf_file.values() if type(x) == h5py.Group]
-    return sorted(entries, key=repr)
 
 def makedat(arf_file, foldername, start_channel, stop_channel,
             data_max, Nentries=-1, verbose=True):
@@ -50,10 +49,7 @@ def makedat(arf_file, foldername, start_channel, stop_channel,
 
     for entry_name, entry in zip(entries_name, entries):
         # assuming the first N datasets are the electrodes
-        datasets = [x for x in entry.values()
-                    if type(x) == h5py.Dataset
-                    and 'datatype' in x.attrs.keys()
-                    and x.attrs['datatype'] < 1000]
+        datasets = entry_time_series_datasets(entry)
         electrodes = sorted(datasets, key=repr)[start_channel:stop_channel]
         assert(len(electrodes) == stop_channel - start_channel)
         assert(len(set([len(e) for e in electrodes])) == 1)
