@@ -5,11 +5,12 @@ import os.path
 import argparse
 import h5py
 import numpy as np
-from scipy.signal import butter, filtfilt
+from scipy.signal import cheby2, filtfilt
 import arf
 from numpy.lib import recfunctions
 from arftoclu import arf_samplerate
 import stimalign
+from utils import jstim_log_sequence
 
 __version__ = '0.2.0'
 
@@ -41,11 +42,6 @@ def spike_metadata(kwik_file, spikes_file):
             spikes_file['groups_of_clusters'] = np.append(spikes_file['groups_of_clusters'],
                                                           groups_of_clusters)
     return None
-
-
-def jstim_log_sequence(stimlog):
-    return [line.split()[-3] for line in open(stimlog, 'r')
-            if ' [jstim] next stim: ' in line]
 
 
 def find_and_write_pulse_time(arf_file, arf_entry_name, pulsechan,
@@ -97,16 +93,22 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
             spike_entry[waves_dset_name].value = np.append(spike_entry[waves_dset_name], waves)
 
 
-def add_lfp(spike_entry, raw_entry, Nlfp, cutoff=300, order=3,
-            lfp_sampling_rate=1000):
+def add_lfp(spike_entry, raw_entry, Nlfp, cutoff=300, order=4,
+            ripple=20, lfp_sampling_rate=1000, verbose=True):
     """adds first N lfp channels to the spike_entry"""
-    data_channels = [x for x in raw_entry if type(x) == h5py.Dataset
+    data_channels = [x for x in raw_entry.values()
+                     if isinstance(x, h5py.Dataset)
                      and 'datatype' in x.attrs
-                     and x.attrs['datatype'] < 1000]
+                     and int(x.attrs['datatype']) < 1000]
+    print(len(data_channels))
     data_channels = sorted(data_channels, key=repr)[:Nlfp]
+    
     for chan in data_channels:
+        if verbose:
+            print("lfp chan: {}".format(chan))
         # low pass filter
-        b, a = butter(order, cutoff * chan.attrs['sampling_rate'] / 2.)
+        b, a = cheby2(order, ripple,
+                      cutoff / (chan.attrs['sampling_rate'] / 2.))
         lfp = filtfilt(b, a, chan)
         # resample
         old_x = np.arange(len(chan)) / chan.attrs['sampling_rate']
@@ -132,8 +134,8 @@ def get_geometry(probe, verbose=True):
 def main(kwik_file, arf_file, spikes_file,
          stimlog=None, nlfp=0, pulsechan='', stimchannel='',
          probe=None, autodetect_pulse_channel=False, verbose=True):
-
-    spike_metadata(kwik_file, spikes_file)
+    if kwik_file is not None:
+        spike_metadata(kwik_file, spikes_file)
 
     if autodetect_pulse_channel:
         #determine pulse channel
@@ -175,12 +177,14 @@ def main(kwik_file, arf_file, spikes_file,
                                       spike_entry, verbose)
         if stimchannel:
             spike_entry.copy(arf_file[k][stimchannel], "stim")
+            spike_entry
         if nlfp:
             add_lfp(spike_entry, arf_file[k], nlfp)
 
         start_sample = stop_sample  # update starting time for next entry
         stop_sample = start_sample + dataset_length(entry)
-        add_spikes(spike_entry, kwik_file, start_sample, stop_sample)
+        if kwik_file is not None:
+            add_spikes(spike_entry, kwik_file, start_sample, stop_sample)
 
     print('Done!')
 
@@ -189,7 +193,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--kwik', help='hdf5 file containing the spike \
     sorting results, usually a .kwik',
-                        required=True)
+                        default=None)
     parser.add_argument('--arf', help='original arf file containing raw data',
                         required=True)
     parser.add_argument('--stim', help='a jstim log to identify the stimulus')
@@ -217,10 +221,17 @@ if __name__ == '__main__':
         spikes_filename = os.path.splitext(os.path
                                            .split(args.arf)[-1])[0] \
             + '_spikes.arf'
+    else:
+        spikes_filename = args.out
 
-    with h5py.File(args.kwik, 'r') as kwik_file,\
-        h5py.File(args.arf, 'r') as arf_file,\
-        arf.open_file(spikes_filename, 'w') as spikes_file:
-
-        main(kwik_file, arf_file, spikes_file,
-             args.stim, args.lfp, args.pulse, args.stimchannel, args.probe)
+    with  h5py.File(args.arf, 'r') as arf_file,\
+         arf.open_file(spikes_filename, 'w') as spikes_file:
+        if args.kwik is not None:
+            with h5py.File(args.kwik, 'r') as kwik_file:
+                main(kwik_file, arf_file, spikes_file,
+                     args.stim, args.lfp, args.pulse,
+                     args.stimchannel, args.probe)
+        else:
+            main(None, arf_file, spikes_file,
+                 args.stim, args.lfp, args.pulse,
+                 args.stimchannel, args.probe)
