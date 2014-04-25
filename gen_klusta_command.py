@@ -8,7 +8,7 @@ def subset(filebase, directory, shank_num, max_spikes):
     clu_filename = "{}.clu.{}".format(os.path.join(directory, filebase), 
                                       shank_num)
     Nspikes = float(sum(1 for line in open(clu_filename)))
-    return ceil(Nspikes/max_spikes)
+    return int(ceil(Nspikes/max_spikes))
 
 
 def klustakwik_strings(filebase, directory, shank_num, nchannels, max_spikes):
@@ -18,22 +18,22 @@ def klustakwik_strings(filebase, directory, shank_num, nchannels, max_spikes):
     klus_args = ['MaskedKlustaKwik',
                  filebase,
                  str(shank_num),
-                 '-MaskStarts', str(minclus),
+                 #'-MaskStarts', str(minclus),
                  '-PenaltyK', '1',
                  '-PenaltyKLogN', '0',
                  '-UseDistributional', '1',
                  #'-SplitFirst', '40',
                  #'-SplitEvery', '100',
                  #'-MaxIter', '400',
-                 '-MaxPossibleClusters', str(maxclus),
+                 #'-MaxPossibleClusters', str(maxclus),
                  '-UseMaskedInitialConditions', '1',
-                 #'-Subset', str(subsample_factor)
+                 '-Subset', str(subsample_factor)
     ]
     return klus_args
 
 
 def main(filebase, directory,
-         shank_num, nchannels=32, max_spikes=1500000, torque=False):
+         shank_num, nchannels=32, max_spikes=800000, torque=False):
     filebase = os.path.split(filebase)[-1]
     klus_args = klustakwik_strings(filebase, directory,
                                    shank_num, nchannels, max_spikes)
@@ -42,16 +42,23 @@ def main(filebase, directory,
     print torque
     with open(scriptname, 'w') as f:
         if torque == 'beast':
-            f.write('#PBS -N {}_{}\n'.format(filebase, shank_num))
+            f.write('#PBS -N {}{}\n'.format(filebase[-15:], shank_num))
             f.write('#PBS -o {}_{}_err.txt\n'.format(filebase, shank_num))
-            f.write('#PBS -l nodes=1:ppn=8\n')
-            #f.write('#PBS -l walltime=48:00:00\n')
+            f.write('#PBS -l nodes=1:ppn=5\n')
+            f.write('#PBS -l walltime=120:00:00\n')
             f.write('#PBS -V\n')
-            f.write('cd {}\n'.format(directory))
+            f.write('cd $PBS_O_WORKDIR\n')
+            f.write(" ".join(klus_args) + '\n')
         elif torque == 'beagle':
-            print("no")
-
-        f.write(" ".join(klus_args) + '\n')
+            f.write('#PBS -N {}{}\n'.format(filebase[-15:], shank_num))
+            f.write('#PBS -o {}_{}_err.txt\n'.format(filebase, shank_num))
+            f.write('#PBS -l mppwidth=1\n')
+            f.write('#PBS -l walltime=120:00:00\n')
+            f.write('cd $PBS_O_WORKDIR\n')
+            f.write("aprun -n 1 -N 1 ")
+            f.write(" ".join(klus_args) + '\n')
+        else:
+            f.write(" ".join(klus_args) + '\n')
 
     call(['chmod', 'u+x', scriptname])
 

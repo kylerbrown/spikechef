@@ -10,6 +10,12 @@ CHUNKSIZE = 500000  # chunks of arf arrays to place in .dat binaries
                     # size of file: CHUNKSIZE * number of channels
 
 
+def counter_function():
+    i = 0
+    while True:
+        yield i
+        i+=1
+
 def determine_maximum_value(entries, start_channel,
                             stop_channel, verbose=True):
     print('detecting maximum value to maximize bit depth...')
@@ -35,8 +41,10 @@ def determine_maximum_value(entries, start_channel,
 
 
 def makedat(arf_file, foldername, start_channel, stop_channel,
-            data_max, Nentries=-1, verbose=True):
+            data_max, Nentries=-1, counter=None, verbose=True):
     '''generates .dat files for use in the sorting software.'''
+    if counter is None:
+        counter = counter_function()
 #    arf_file = h5py.File(arf_filename, 'r')
     filebase = os.path.split(os.path.splitext(arf_file.filename)[0])[-1]
     entries = arf_entries(arf_file)
@@ -57,10 +65,10 @@ def makedat(arf_file, foldername, start_channel, stop_channel,
         for i in range(0, len(electrodes[0]), CHUNKSIZE):
             X = np.column_stack(e[i:i + CHUNKSIZE] for e in electrodes)
             X = np.ravel(np.int16(X / data_max * (2**15 - 1)))
-            filename = '{}_a_{}_{:03}.dat'.format(filebase,
-                                                 os.path
-                                                 .split(entry_name)[-1],
-                                                 i / CHUNKSIZE)
+            filename = '{:04}_{}_a_{}_{:03}.dat'.format(counter.next(),
+                                                        filebase,
+                                                        os.path.split(entry_name)[-1],
+                                                        i / CHUNKSIZE)
             filename = os.path.abspath(os.path.join(foldername, filename))
             print("{} bit depth utilized".format(np.max(np.abs(X))/(2.**15-1)))
             X.tofile(filename)
@@ -118,8 +126,14 @@ if __name__ == "__main__":
         os.mkdir(args.directory)
 
     # make dats
+    counter = counter_function()
     for arf in args.arfs:
         with h5py.File(arf, 'r') as arf_file:
             makedat(arf_file, args.directory, args.start_channel,
                     args.stop_channel, data_max, args.num_entries,
-                    verbose)
+                    counter, verbose)
+
+    # save a list of arf files used.
+    filename = os.path.join(args.directory, 'arf_files.txt')
+    with open(filename, 'w') as f:
+        f.writelines(["{}\n".format(item)  for item in args.arfs])

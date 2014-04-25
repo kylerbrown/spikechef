@@ -72,7 +72,7 @@ A4x8_50_1indexed = {
         (27, 30),
         (30, 28),
         (28, 29),
-    }
+    ]}
 A4x8_50 = {k:[(a - 1, b - 1) for a, b in v] for k, v in A4x8_50_1indexed.items()}
 
 #probes = { k: [(nexus32toRHD2132[a], nexus32toRHD2132[b])
