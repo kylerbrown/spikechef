@@ -12,7 +12,7 @@ from arftoclu import arf_samplerate
 import stimalign
 from utils import jstim_log_sequence
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 description = '''
 clutoarf.py
@@ -133,7 +133,8 @@ def get_geometry(probe, verbose=True):
 
 def main(kwik_file, arf_file, spikes_file,
          stimlog=None, nlfp=0, pulsechan='', stimchannel='',
-         probe=None, autodetect_pulse_channel=False, verbose=True):
+         probe=None, start_sample=0,
+         autodetect_pulse_channel=False, verbose=True):
     if kwik_file is not None:
         spike_metadata(kwik_file, spikes_file)
 
@@ -159,7 +160,7 @@ def main(kwik_file, arf_file, spikes_file,
         spikes_file['geometry'] = get_geometry(probe)
     # adding spike times and waveforms, and such, creating spike entries
     # in spikes_file
-    stop_sample = 0
+    stop_sample = start_sample
     for k, entry, stim_name in zip(keys, entries, stim_sequence):
         print(k)
         print(entry.name)
@@ -187,6 +188,7 @@ def main(kwik_file, arf_file, spikes_file,
             add_spikes(spike_entry, kwik_file, start_sample, stop_sample)
 
     print('Done!')
+    return stop_sample
 
 
 if __name__ == '__main__':
@@ -194,8 +196,9 @@ if __name__ == '__main__':
     parser.add_argument('--kwik', help='hdf5 file containing the spike \
     sorting results, usually a .kwik',
                         default=None)
-    parser.add_argument('--arf', help='original arf file containing raw data',
-                        required=True)
+#    parser.add_argument('--arf', help='original arf file containing raw')
+    parser.add_argument('arflist', help='ordered list of arf files.',
+                        nargs="+", required=True)
     parser.add_argument('--stim', help='a jstim log to identify the stimulus')
     parser.add_argument('--lfp',
                         help='create lfp datasets, \
@@ -209,6 +212,9 @@ if __name__ == '__main__':
                         help='name of stimulus channel, will be copied')
     parser.add_argument('--probe',
                         help='name of .probe file, for storing geometry')
+    parser.add_argument("--start-sample", default=0, type=int,
+                        help="""sample number in kwik to start adding spikes,
+                        useful when multiple arf files were sorted together""")
     args = parser.parse_args()
 
     used_files = [args.kwik, args.arf]
@@ -224,14 +230,19 @@ if __name__ == '__main__':
     else:
         spikes_filename = args.out
 
-    with  h5py.File(args.arf, 'r') as arf_file,\
-         arf.open_file(spikes_filename, 'w') as spikes_file:
-        if args.kwik is not None:
-            with h5py.File(args.kwik, 'r') as kwik_file:
-                main(kwik_file, arf_file, spikes_file,
-                     args.stim, args.lfp, args.pulse,
-                     args.stimchannel, args.probe)
-        else:
-            main(None, arf_file, spikes_file,
-                 args.stim, args.lfp, args.pulse,
-                 args.stimchannel, args.probe)
+    start_sample = args.start_sample # defaults to 0
+    for arf_name in args.arf_list:
+        with  h5py.File(arf_name, 'r') as arf_file,\
+             arf.open_file(spikes_filename, 'w') as spikes_file:
+            if args.kwik is not None:
+                with h5py.File(args.kwik, 'r') as kwik_file:
+                    start_sample = main(kwik_file, arf_file, spikes_file,
+                                        args.stim, args.lfp, args.pulse,
+                                        args.stimchannel, args.probe,
+                                        start_sample=start_sample)
+            else:
+                start_sample = main(None, arf_file, spikes_file,
+                                    args.stim, args.lfp, args.pulse,
+                                    args.stimchannel, args.probe,
+                                    start_sample=start_sample)
+    print("final sample: {}".format(start_sample))
