@@ -8,9 +8,8 @@ import numpy as np
 from scipy.signal import cheby2, filtfilt
 import arf
 from numpy.lib import recfunctions
-from arftoclu import arf_samplerate
 import stimalign
-from utils import jstim_log_sequence
+from utils import jstim_log_sequence, arf_samplerate
 
 __version__ = '0.3.0'
 
@@ -80,11 +79,14 @@ def add_spikes(spike_entry, kwik_file, start_sample, stop_sample):
         waves_dset_name = 'waves_{}'.format(shanknum + 1)
 
         if spike_dset_name not in spike_entry:
+            spike_samplerate = arf_samplerate(args.arf_list[0])  # TODO better method
+            units = [x.encode('utf8') for x in
+                     ('ID', 'ID', 'none', 'none', 'samples')]
             arf.create_dataset(spike_entry, spike_dset_name,
                                spikes,
-                               units=('ID', 'ID', 'none', 'none', 'samples'),
+                               units=units,
                                datatype=1001,
-                               sampling_rate=arf_samplerate(args.arf_list[0])) #  TODO better method
+                               sampling_rate=spike_samplerate)
             arf.create_dataset(spike_entry, waves_dset_name, waves,
                                units='samples', datatype=11001,
                                sampling_rate=arf_samplerate(args.arf_list[0]))
