@@ -40,3 +40,23 @@ def plot_song(song, xstart, xstop):
     x = np.arange(len(song)) / 30000.
     xmask = np.logical_and(x < xstop, x >= xstart)
     plt.specgram(song[xmask], Fs=30000)
+
+
+def arf_samplerate(arf_filename):
+    if isinstance(arf_filename, h5py.File):
+        arf_file = arf_filename
+        open_flag = False
+    else:
+        arf_file = h5py.File(arf_filename, 'r')
+        open_flag = True
+    for group in arf_file.values():
+        for dataset in group.values():
+            if 'datatype' in dataset.attrs \
+               and dataset.attrs['datatype'] < 1000 \
+               and 'sampling_rate' in dataset.attrs:
+                sampling_rate = dataset.attrs['sampling_rate']
+                print(sampling_rate)
+                if open_flag:
+                    arf_file.flush()
+                    arf_file.close()
+                return sampling_rate
