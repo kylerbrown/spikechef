@@ -5,9 +5,11 @@ from spikedetekt.probes import Probe
 from spikedetekt import detektspikes
 import argparse
 
+
 def list_datfiles(directory):
-    return sorted([os.path.abspath(os.path.join(directory, f)) 
+    return sorted([os.path.abspath(os.path.join(directory, f))
                    for f in os.listdir(directory) if f[-4:] == ".dat"])
+
 
 def arf_samplerate(arf_filename):
     if isinstance(arf_filename, h5py.File):
