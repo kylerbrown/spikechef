@@ -13,7 +13,7 @@ if __name__=='__main__':
     options = p.parse_args()
     print options.name
     
-    with h5py.File('.'.join([splitext(options.arf)[0], 'kwd']),'w-') as kwd_file:
+    with h5py.File('.'.join([splitext(options.arf)[0], 'raw.kwd']),'w-') as kwd_file:
         kwd_file.create_group('recordings')
         with h5py.File(options.arf,'r+') as arf_file:
             groups = (entry for entry in arf_file.itervalues() if isinstance(entry,h5py.Group))
