@@ -1,0 +1,48 @@
+import h5py
+import argparse
+from os.path import splitext
+import numpy as np
+
+if __name__=='__main__':
+    p = argparse.ArgumentParser(prog="arf2kwd.py")
+    p.add_argument("arf", help="Arf file to convert to kwd")
+    
+    options = p.parse_args()
+    with h5py.File('.'.join([splitext(options.arf)[0], 'kwd']),'w-') as kwd_file:
+        kwd_file.create_group('recordings')
+        with h5py.File(options.arf,'r+') as arf_file:
+            groups = (entry for entry in arf_file.itervalues() if isinstance(entry,h5py.Group))
+            nchannels = None
+            for idx,group in enumerate(groups):
+                channels = [dset for dset in group.itervalues()
+                            if dset.attrs.get('datatype') in (3,23)]
+                import pdb
+                if nchannels in (len(channels),None):
+                    nchannels = len(channels)
+                else:
+                    raise ValueError("The number of extracellular channels must be the same in all arf entries")
+
+                dset_sizes = [ch.size for ch in channels]
+                if all(s == dset_sizes[0] for s in dset_sizes):
+                    dset_size = dset_sizes[0]
+                else:
+                    raise ValueError("The number size of each extracellular dataset within each arf entry must be equal")
+
+                kwd_group = kwd_file['recordings'].create_group(str(idx))
+                dataset=kwd_group.create_dataset('data',shape=(nchannels,dset_size),
+                                                 dtype='int16')
+                max_array_size = 10**7 #maximum size of array data to read from disk 
+                for ch_idx,channel in enumerate(channels):
+                    #convert from microvolts to original integer data (but as *signed* integers).
+                    for start in xrange(0,dset_size,max_array_size):
+                        stop = min(dset_size,start+max_array_size)
+                        dataset[ch_idx,start:stop] = channel[start:stop]/0.195
+
+                #creating extraneous group and attribute
+                kwd_group.create_group('filter')
+                kwd_group.attrs['downsample_factor'] = np.string_('N.')
+
+
+        
+                    
+                
