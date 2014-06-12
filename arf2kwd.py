@@ -6,8 +6,12 @@ import numpy as np
 if __name__=='__main__':
     p = argparse.ArgumentParser(prog="arf2kwd.py")
     p.add_argument("arf", help="Arf file to convert to kwd")
+    p.add_argument("-n", "name", help="in addition to data of types 3, or 23, include channels\
+     containing NAME in their channel name",
+                   default=False)
     
     options = p.parse_args()
+    
     with h5py.File('.'.join([splitext(options.arf)[0], 'kwd']),'w-') as kwd_file:
         kwd_file.create_group('recordings')
         with h5py.File(options.arf,'r+') as arf_file:
@@ -15,12 +19,14 @@ if __name__=='__main__':
             nchannels = None
             for idx,group in enumerate(groups):
                 channels = [dset for dset in group.itervalues()
-                            if dset.attrs.get('datatype') in (3,23)]
-                import pdb
+                            if dset.attrs.get('datatype') in (3,23)
+                            or (options.name and options.name in dset.name.split('/')[-1])]
                 if nchannels in (len(channels),None):
                     nchannels = len(channels)
                 else:
                     raise ValueError("The number of extracellular channels must be the same in all arf entries")
+                if nchannels == 0:
+                    raise ValueError("No channels of correct datatyple")
 
                 dset_sizes = [ch.size for ch in channels]
                 if all(s == dset_sizes[0] for s in dset_sizes):
@@ -28,6 +34,8 @@ if __name__=='__main__':
                 else:
                     raise ValueError("The number size of each extracellular dataset within each arf entry must be equal")
 
+                for dset in channels:
+                    print(dset.name)
                 kwd_group = kwd_file['recordings'].create_group(str(idx))
                 dataset=kwd_group.create_dataset('data',shape=(nchannels,dset_size),
                                                  dtype='int16')
@@ -41,8 +49,3 @@ if __name__=='__main__':
                 #creating extraneous group and attribute
                 kwd_group.create_group('filter')
                 kwd_group.attrs['downsample_factor'] = np.string_('N.')
-
-
-        
-                    
-                
