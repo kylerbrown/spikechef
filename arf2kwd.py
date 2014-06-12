@@ -38,14 +38,14 @@ if __name__=='__main__':
                 for dset in channels:
                     print(dset.name)
                 kwd_group = kwd_file['recordings'].create_group(str(idx))
-                dataset=kwd_group.create_dataset('data',shape=(nchannels,dset_size),
+                dataset=kwd_group.create_dataset('data',shape=(dset_size, nchannels),
                                                  dtype='int16')
                 max_array_size = 10**7 #maximum size of array data to read from disk 
                 for ch_idx,channel in enumerate(channels):
                     #convert from microvolts to original integer data (but as *signed* integers).
                     for start in xrange(0,dset_size,max_array_size):
                         stop = min(dset_size,start+max_array_size)
-                        dataset[ch_idx,start:stop] = np.round(channel[start:stop]/0.195)
+                        dataset[start:stop, ch_idx] = np.round(channel[start:stop]/0.195)
 
                 #creating extraneous group and attribute
                 kwd_group.create_group('filter')
