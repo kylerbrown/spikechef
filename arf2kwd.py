@@ -6,11 +6,12 @@ import numpy as np
 if __name__=='__main__':
     p = argparse.ArgumentParser(prog="arf2kwd.py")
     p.add_argument("arf", help="Arf file to convert to kwd")
-    p.add_argument("-n", "name", help="in addition to data of types 3, or 23, include channels\
+    p.add_argument("-n", "--name", help="in addition to data of types 3, or 23, include channels\
      containing NAME in their channel name",
                    default=False)
     
     options = p.parse_args()
+    print options.name
     
     with h5py.File('.'.join([splitext(options.arf)[0], 'kwd']),'w-') as kwd_file:
         kwd_file.create_group('recordings')
@@ -44,7 +45,7 @@ if __name__=='__main__':
                     #convert from microvolts to original integer data (but as *signed* integers).
                     for start in xrange(0,dset_size,max_array_size):
                         stop = min(dset_size,start+max_array_size)
-                        dataset[ch_idx,start:stop] = channel[start:stop]/0.195
+                        dataset[ch_idx,start:stop] = np.round(channel[start:stop]/0.195)
 
                 #creating extraneous group and attribute
                 kwd_group.create_group('filter')
