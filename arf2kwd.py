@@ -1,6 +1,8 @@
 import h5py
 import argparse
+import os
 from os.path import splitext
+import stat
 import numpy as np
 
 if __name__=='__main__':
@@ -12,8 +14,8 @@ if __name__=='__main__':
     
     options = p.parse_args()
     print options.name
-    
-    with h5py.File('.'.join([splitext(options.arf)[0], 'raw.kwd']),'w-') as kwd_file:
+    arffilename = '.'.join([splitext(options.arf)[0], 'raw.kwd'])
+    with h5py.File(arffilename,'w-') as kwd_file:
         kwd_file.create_group('recordings')
         with h5py.File(options.arf,'r+') as arf_file:
             groups = (entry for entry in arf_file.itervalues() if isinstance(entry,h5py.Group))
@@ -50,3 +52,5 @@ if __name__=='__main__':
                 #creating extraneous group and attribute
                 kwd_group.create_group('filter')
                 kwd_group.attrs['downsample_factor'] = np.string_('N.')
+
+    os.chmod(arffilename, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
