@@ -1,7 +1,22 @@
 spikechef
 =========
-
 Sorts multichannel arf data. Uses the klusta* suite.
+
+For each program, try `--help` to see options
+
+
+V 0.3
+==================
+1. collect data using Intan's RHD2000 interface software, which creates *.rhd files in a single directory.
+2. use `rhd2arf.m` (Matlab script) to create arf files
+3. convert those arf files to .kwd (hdf5 format for klusta suite) with `arf2kwd.py`.
+4. also create/use appropriate .prm and prb files (see klusta suite docs). and run `klusta EXPERIMENT.prm`
+5. merge spikes back into the arf file with ...(TODO)
+
+
+
+V 0.2
+==================
 
 Usage
 ---------
@@ -11,4 +26,3 @@ Usage
 4. After clustering, use klustaviewer to review
 5. use `clutoarf.py` to create spike-sorted arf file for analysis!
 
-For each program, try `--help` to see options
