@@ -115,7 +115,7 @@ def N_colors(N, Srange=(.5, 1), Vrange=(.5, 1)):
     return hsv_to_rgb(HSV)
 
 
-def get_starts(arf, name='bos'):
+def get_starts(arf, name):
     """returns the times (in samples)
     of stimuli with name=NAME"""
     time_dset = arf['entry']['stimulus_time']
@@ -124,8 +124,8 @@ def get_starts(arf, name='bos'):
     return time_dset['start'.encode('utf-8')][mask]
 
 
-def peristimulus_times(arf, spike_times, pre=-2, post=4, label="bos",
-                       sampling_rate=30000):
+def peristimulus_times(arf, spike_times, label,
+                       sampling_rate, pre=-2, post=4):
     """returns a list of spike time lists,
     input spike times are in samples and pre, post are in seconds
     spike_times and labels must had the same sampling_rate

@@ -28,9 +28,7 @@ setup(
     description='arf wrapper for klusta suite',
     long_description=long_description,
     #packages=['spikechef'],
-    py_modules=["run_spikechef", "mergespon", "psth",
-                "stimalign", "jstim_label",
-                "clutoarf", "arftoclu"],
+    py_modules=["spikechef"],
     #include_package_data=True,
     platforms='any',
     classifiers=[
