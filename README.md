@@ -8,7 +8,7 @@ For each program, try `--help` to see options
 V 0.3
 ==================
 1. collect data using Intan's RHD2000 interface software, which creates *.rhd files in a single directory.
-2. use `rhd2arf.m` (Matlab script) to create arf files
+2. use `rhd2arf.m` (Matlab script) to create arf files. [code](https://github.com/kylerbrown/rhd2arf) You can run the script from the command line from within the *.rhd directory by typing `matlab -nodisplay -r "path(path, '~/code/rhd2arf');rhd2arf;exit"`
 3. use `label_stim` to annotate arf file with stimulus times and `dumber_sums.py` to get an estimate of stimulus response.
 3. convert those arf files to .kwd (hdf5 format for klusta suite) with `arf2kwd.py`.
 4. also create/use appropriate .prm and prb files (see klusta suite docs). and run `klusta EXPERIMENT.prm`
