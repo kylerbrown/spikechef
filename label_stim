@@ -12,9 +12,8 @@ import argparse
 from scipy.signal import fftconvolve
   
 def classify_stim(stimuli, stim_copies, sr=30000):
-    '''Classifies stimuli if no stimulus log exists'''                         
+    '''Classifies stimuli if no stimulus log exists'''
 
-    
     max_corr = lambda x,y: np.max(fftconvolve(x,y[::-1]))
     stim_idx = [np.argmax([max_corr(stim,copy) for stim in stimuli])
                 for copy in stim_copies]
@@ -23,7 +22,9 @@ def classify_stim(stimuli, stim_copies, sr=30000):
 
 def dset_generator(arf_file, dataset_name):
     for entry in arf_file.itervalues():
-        if isinstance(entry,h5py.Group) and dataset_name in entry:
+        print(entry)
+        print(dataset_name)
+        if isinstance(entry, h5py.Group) and dataset_name in entry:
             yield entry[dataset_name]
         else:
             raise IOError('No dataset named {}'.format(dataset_name))
@@ -81,12 +82,13 @@ def main():
     p.add_argument("-w","--wavenames",help="""Stimulus wave files""",nargs="+")
     p.add_argument("-l","--labels", help="""Labels for each stimulus""",nargs="+",
                    required=True)
-    p.add_argument("-p","--pulse_channel",help="""Name of pulse channel""")
-    p.add_argument("-c","--copy_channel", help="""Name of stimulus copy channel""")
+    p.add_argument("-p","--pulse_channel",help="""Name of pulse channel""", required=True)
+    p.add_argument("-c","--copy_channel", help="""Name of stimulus copy channel""", required=True)
     p.add_argument("-d","--dataset_name", help="""Name of label datasets to be created""", default="stimulus_time")
-    p.add_argument("-s","--stimulus_group",help="""Name of the group in the arf file containing the stimuli""",default="stimuli")
+    p.add_argument("-s","--stimulus_group",help="""Name of the group in the arf file containing the stimuli""", default="stimuli")
 
     options=p.parse_args()
+    print(options.stimulus_group)
     label_stim(options.arf,options.wavenames,
                options.labels,options.pulse_channel,
                options.copy_channel,options.dataset_name,
