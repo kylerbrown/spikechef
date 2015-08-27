@@ -13,7 +13,7 @@ from scipy.signal import fftconvolve
   
 def classify_stim(stimuli, stim_copies, sr=30000):
     '''Classifies stimuli if no stimulus log exists'''
-
+    print("length =\t{}".format([len(x) for x in stim_copies]))
     max_corr = lambda x,y: np.max(fftconvolve(x,y[::-1]))
     stim_idx = [np.argmax([max_corr(stim,copy) for stim in stimuli])
                 for copy in stim_copies]
@@ -22,12 +22,21 @@ def classify_stim(stimuli, stim_copies, sr=30000):
 
 def dset_generator(arf_file, dataset_name):
     for entry in arf_file.itervalues():
-        print(entry)
-        print(dataset_name)
-        if isinstance(entry, h5py.Group) and dataset_name in entry:
+        #print(entry)
+        #print(dataset_name)
+        if not isinstance(entry, h5py.Group):
+            continue
+        elif dataset_name in entry:
             yield entry[dataset_name]
         else:
-            raise IOError('No dataset named {}'.format(dataset_name))
+            print("{} does not exist in {}".format(dataset_name, entry.name))
+            pass
+            #raise IOError('No dataset named {}'.format(dataset_name))
+
+def detect_pulse(pulse_dset, thr=1):
+            thresh_crossings = np.where(np.logical_and(pulse_dset[:-1]<thr, pulse_dset[1:]>thr))[0]
+            starts = [t + np.argmax(pulse_dset[t:t+2000]) for t in thresh_crossings]
+            return starts
 
 def label_stim(arfname, wavenames, stim_labels, pulse_key,
                copy_key, dset_name='stimulus_time', stimulus_group='stimuli'):
@@ -40,9 +49,7 @@ def label_stim(arfname, wavenames, stim_labels, pulse_key,
         copy_dsets = dset_generator(arf_file, copy_key)
         for pulse_dset, copy_dset in izip(pulse_dsets,copy_dsets):
             print((pulse_dset.name, copy_dset.name))
-            thr = 200 * np.median(np.abs(pulse_dset[:])/.6745);#.6475 converts to estimator of std
-            thresh_crossings = np.where(np.logical_and(pulse_dset[:-1]<thr, pulse_dset[1:]>thr))[0]
-            starts = [t + np.argmax(pulse_dset[t:t+2000]) for t in thresh_crossings]
+            starts = detect_pulse(pulse_dset)
 
             # creating label dataset
             stim_list = [(s,'') for s in starts]
@@ -66,6 +73,7 @@ def label_stim(arfname, wavenames, stim_labels, pulse_key,
             stim_idx = classify_stim(resampled_wavs, stim_copies)
             name = np.array(stim_labels)[stim_idx]
             label_dset['name'] = name
+            print(name)
 
         #saving stimuli
         if stimulus_group not in arf_file:
