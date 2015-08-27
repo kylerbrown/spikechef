@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 from setuptools import setup
 import io
 import os
@@ -19,15 +19,15 @@ long_description = read('README.md')
 
 setup(
     name='spikechef',
-    scripts=['run_spikechef.py', 'jstim_label.py'],
-    version="0.1.02",
+    scripts=['label_stim'],
+    version="0.3.02",
     url='http://github.com/kylerbrown/spikechef/',
     license='MIT License',
     author='Kyler J Brown',
     author_email='kylerjbrown@gmail.com',
     description='arf wrapper for klusta suite',
     long_description=long_description,
-    #packages=['spikechef'],
+    packages=['spikechef'],
     py_modules=["spikechef"],
     #include_package_data=True,
     platforms='any',
