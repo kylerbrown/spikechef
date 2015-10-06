@@ -7,7 +7,6 @@ import ewave
 from scipy.signal import resample
 import time
 import os
-from itertools import izip
 import argparse
 from scipy.signal import fftconvolve
 
@@ -23,7 +22,7 @@ def classify_stim(stimuli, stim_copies, sr=30000):
 
 
 def dset_generator(arf_file, dataset_name):
-    for entry in arf_file.itervalues():
+    for entry in arf_file.values():
         # print(entry)
         # print(dataset_name)
         if not isinstance(entry, h5py.Group):
@@ -36,15 +35,13 @@ def dset_generator(arf_file, dataset_name):
             #raise IOError('No dataset named {}'.format(dataset_name))
 
 
-def detect_pulse(pulse_dset, thr=1):
-    thresh_crossings = np.where(
-        np.logical_and(
-            pulse_dset[
-                :-1] < thr,
-            pulse_dset[
-                1:] > thr))[0]
-    starts = [t + np.argmax(pulse_dset[t:t + 2000]) for t in thresh_crossings]
-    return starts
+def detect_pulse(pulse_dset, thr=.5):
+    crossings = (pulse_dset[:-1] < thr) & (pulse_dset[1:] > thr)
+    thresh_crossings = np.where(crossings)[0]
+    if len(thresh_crossings) > 0:
+        return thresh_crossings + 1
+    else:
+        return thresh_crossings
 
 
 def label_stim(arfname, wavenames, stim_labels, pulse_key,
@@ -57,14 +54,15 @@ def label_stim(arfname, wavenames, stim_labels, pulse_key,
         # that time
         pulse_dsets = dset_generator(arf_file, pulse_key)
         copy_dsets = dset_generator(arf_file, copy_key)
-        for pulse_dset, copy_dset in izip(pulse_dsets, copy_dsets):
+        for pulse_dset, copy_dset in zip(pulse_dsets, copy_dsets):
             print((pulse_dset.name, copy_dset.name))
             starts = detect_pulse(pulse_dset)
 
             # creating label dataset
             stim_list = [(s, '') for s in starts]
-            stim_dtype = [('start', int), ('name', 'a%d' %
-                                           (max(len(lb) for lb in stim_labels)))]
+            stim_dtype = [('start', int),
+                          ('name', 'a%d' %
+                           (max(len(lb) for lb in stim_labels)))]
             stim_array = np.array(stim_list, dtype=stim_dtype)
             sr = pulse_dset.attrs['sampling_rate']
             if dset_name in pulse_dset.parent:
@@ -79,8 +77,8 @@ def label_stim(arfname, wavenames, stim_labels, pulse_key,
                 data=stim_array,
                 datatype=2001,
                 units=(
-                    'samples',
-                    ''),
+                    np.string_('samples'),
+                    np.string_('')),
                 sampling_rate=sr)
 
             # classifying stimuli

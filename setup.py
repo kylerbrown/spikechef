@@ -19,8 +19,8 @@ long_description = read('README.md')
 
 setup(
     name='spikechef',
-    scripts=['label_stim'],
-    version="0.3.02",
+    scripts=['scripts/label_stim'],
+    version="0.3.03",
     url='http://github.com/kylerbrown/spikechef/',
     license='MIT License',
     author='Kyler J Brown',
@@ -29,7 +29,7 @@ setup(
     long_description=long_description,
     packages=['spikechef'],
     py_modules=["spikechef"],
-    #include_package_data=True,
+    include_package_data=True,
     platforms='any',
     classifiers=[
         'Programming Language :: Python',
