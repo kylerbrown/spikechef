@@ -40,4 +40,7 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
         ],
+    extras_require={
+        'testing': ['pytest'],
+    }
 )

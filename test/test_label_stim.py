@@ -27,4 +27,3 @@ class Test_detect_pulse:
     def test_two_pulse_timing(self):
         assert label_stim.detect_pulse(two_pulse)[0] == 10
         assert label_stim.detect_pulse(two_pulse)[1] == 14
-
