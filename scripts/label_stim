@@ -1,0 +1,3 @@
+#!/usr/bin/python
+import spikechef.label_stim
+spikechef.label_stim.main()

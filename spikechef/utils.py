@@ -50,12 +50,13 @@ def arf_samplerate(arf_filename):
         arf_file = h5py.File(arf_filename, 'r')
         open_flag = True
     for group in arf_file.values():
+        if isinstance(group, h5py.Dataset):
+            continue
         for dataset in group.values():
             if 'datatype' in dataset.attrs \
                and dataset.attrs['datatype'] < 1000 \
                and 'sampling_rate' in dataset.attrs:
                 sampling_rate = dataset.attrs['sampling_rate']
-                print(sampling_rate)
                 if open_flag:
                     arf_file.flush()
                     arf_file.close()
